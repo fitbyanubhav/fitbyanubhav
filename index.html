@@ -9,45 +9,25 @@
   <title>FitByAnubhav</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#060a10; font-family: sans-serif; }
+    body { background:#060a10; color:white; font-family:sans-serif; }
+    #loading { display:flex; align-items:center; justify-content:center; height:100vh; flex-direction:column; gap:16px; }
+    .spinner { width:40px; height:40px; border:3px solid #333; border-top-color:#f97316; border-radius:50%; animation:spin 0.8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div id="loading">
+      <div class="spinner"></div>
+      <p style="color:#888">Loading FitByAnubhav...</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sucrase@3.34.0/dist/sucrase.js"></script>
   
-  <!-- Load React -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  
-  <!-- Load Sucrase for fast JSX compilation - much faster than Babel -->
-  <script src="https://unpkg.com/sucrase@3.34.0/dist/sucrase.js"></script>
-  
-  <script>
-    // Pre-setup
-    const { useState, useEffect, useRef } = React;
-    
-    // Compile and run JSX using Sucrase (10x faster than Babel)
-    const appCode = document.getElementById('app-source').textContent;
-    try {
-      const compiled = sucrase.transform(appCode, {
-        transforms: ['jsx'],
-        jsxPragma: 'React.createElement',
-        jsxFragmentPragma: 'React.Fragment',
-        production: true
-      }).code;
-      eval(compiled);
-      const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(React.createElement(App));
-    } catch(e) {
-      document.getElementById('root').innerHTML = 
-        '<div style="color:white;padding:20px;font-family:sans-serif">' +
-        '<h2>Loading error</h2><pre style="font-size:11px;white-space:pre-wrap">' + 
-        e.message + '</pre></div>';
-      console.error(e);
-    }
-  </script>
-  
-  <script type="text/plain" id="app-source">
+  <script id="app-code" type="text/plain">
 
 
 // ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
@@ -327,4 +307,15 @@ function ProgressTracker({ clientId }) {
     setForm({ date: new Date().toISOString().split("T")[0], weight: "", chest: "", waist: "", hips: "", note: "" });
     setShowForm(false);
   };
-  const deleteEntry = (id) => { const u = entries.filter(e => e.id !== id); s
+  const deleteEntry = (id) => { const u = entries.filter(e => e.id !== id); setEntries(u); saveProg(u); };
+
+  const metrics = [
+    { key: "weight", label: "Weight", unit: "kg", color: "#818cf8" },
+    { key: "chest", label: "Chest", unit: "cm", color: "#f97316" },
+    { key: "waist", label: "Waist", unit: "cm", color: "#10b981" },
+    { key: "hips", label: "Hips", unit: "cm", color: "#ec4899" },
+  ];
+
+  const ChartLine = ({ metric }) => {
+    const pts = entries.filter(e => e[metric.key]).map(e => ({ date: e.date, val: parseFloat(e[metric.key]) }));
+    if (pts
