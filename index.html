@@ -8,32 +8,72 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#060a10" />
   <title>FitByAnubhav</title>
-  <style>* { margin:0; padding:0; box-sizing:border-box; } body { background:#060a10; }</style>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:#060a10; font-family: sans-serif; }
+  </style>
 </head>
 <body>
   <div id="root"></div>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone@7.23.0/babel.min.js"></script>
-  <script type="text/babel">
+
+  <!-- Load React -->
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Load Sucrase for fast JSX compilation - much faster than Babel -->
+
+  <script src="https://unpkg.com/sucrase@3.34.0/dist/sucrase.js"></script>
+
+  <script>
+    // Pre-setup
     const { useState, useEffect, useRef } = React;
+    
+    // Compile and run JSX using Sucrase (10x faster than Babel)
+    const appCode = document.getElementById('app-source').textContent;
+    try {
+      const compiled = sucrase.transform(appCode, {
+        transforms: ['jsx'],
+        jsxPragma: 'React.createElement',
+        jsxFragmentPragma: 'React.Fragment',
+        production: true
+      }).code;
+      eval(compiled);
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(App));
+    } catch(e) {
+      document.getElementById('root').innerHTML = 
+        '<div style="color:white;padding:20px;font-family:sans-serif">' +
+        '<h2>Loading error</h2><pre style="font-size:11px;white-space:pre-wrap">' + 
+        e.message + '</pre></div>';
+
+```
+  console.error(e);
+}
+```
+
+  </script>
+
+  <script type="text/plain" id="app-source">
+
 
 // ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
 // ⚠️  To enable live sync: replace these values with your Firebase project config
 const firebaseConfig = {
-apiKey: “AIzaSyDtxJBc0qGfbE7wyX-OshVeR2ymdPHkdog”,
-authDomain: “fitbyanubhav.firebaseapp.com”,
-projectId: “fitbyanubhav”,
-storageBucket: “fitbyanubhav.firebasestorage.app”,
-messagingSenderId: “263426736148”,
-appId: “1:263426736148:web:99fa719df00fa906376701”
+  apiKey: "AIzaSyDtxJBc0qGfbE7wyX-OshVeR2ymdPHkdog",
+  authDomain: "fitbyanubhav.firebaseapp.com",
+  projectId: "fitbyanubhav",
+  storageBucket: "fitbyanubhav.firebasestorage.app",
+  messagingSenderId: "263426736148",
+  appId: "1:263426736148:web:99fa719df00fa906376701"
 };
 
-const USE_FIREBASE = firebaseConfig.apiKey !== “REPLACE_WITH_YOUR_API_KEY”;
+const USE_FIREBASE = firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY";
 
 // ─── LOCAL STORAGE HELPERS (fallback / preview mode) ─────────────────────────
-const STORAGE_KEY = “fitbyanubhav-data”;
-const TRAINER_KEY = “fitbyanubhav-trainer”;
+const STORAGE_KEY = "fitbyanubhav-data";
+const TRAINER_KEY = "fitbyanubhav-trainer";
 function lsGetClients() { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : defaultClients; } catch { return defaultClients; } }
 function lsSaveClients(clients) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(clients)); } catch {} }
 function lsGetTrainer() { try { const r = localStorage.getItem(TRAINER_KEY); return r ? JSON.parse(r) : DEFAULT_TRAINER; } catch { return DEFAULT_TRAINER; } }
@@ -42,56 +82,56 @@ function lsSaveTrainer(t) { try { localStorage.setItem(TRAINER_KEY, JSON.stringi
 // ─── FIREBASE HELPERS (loaded dynamically when config is present) ─────────────
 let _db = null;
 async function getDb() {
-if (_db) return _db;
-const { initializeApp } = await import(“https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js”);
-const { getFirestore } = await import(“https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js”);
-_db = getFirestore(initializeApp(firebaseConfig));
-return _db;
+  if (_db) return _db;
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
+  const { getFirestore } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+  _db = getFirestore(initializeApp(firebaseConfig));
+  return _db;
 }
 async function fbGetClients() {
-const { collection, getDocs } = await import(“https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js”);
-const db = await getDb();
-const snap = await getDocs(collection(db, “clients”));
-return snap.docs.map(d => ({ id: d.id, …d.data() }));
+  const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+  const db = await getDb();
+  const snap = await getDocs(collection(db, "clients"));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 async function fbSaveClient(client) {
-const { doc, setDoc } = await import(“https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js”);
-const db = await getDb();
-await setDoc(doc(db, “clients”, String(client.id)), client);
+  const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+  const db = await getDb();
+  await setDoc(doc(db, "clients", String(client.id)), client);
 }
 async function fbDeleteClient(id) {
-const { doc, deleteDoc } = await import(“https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js”);
-const db = await getDb();
-await deleteDoc(doc(db, “clients”, String(id)));
+  const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+  const db = await getDb();
+  await deleteDoc(doc(db, "clients", String(id)));
 }
 async function fbGetTrainer() {
-const { doc, getDoc } = await import(“https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js”);
-const db = await getDb();
-const snap = await getDoc(doc(db, “settings”, “trainer”));
-return snap.exists() ? snap.data() : DEFAULT_TRAINER;
+  const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+  const db = await getDb();
+  const snap = await getDoc(doc(db, "settings", "trainer"));
+  return snap.exists() ? snap.data() : DEFAULT_TRAINER;
 }
 async function fbSaveTrainer(t) {
-const { doc, setDoc } = await import(“https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js”);
-const db = await getDb();
-await setDoc(doc(db, “settings”, “trainer”), t);
+  const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+  const db = await getDb();
+  await setDoc(doc(db, "settings", "trainer"), t);
 }
 async function fbSubscribeClients(cb) {
-const { collection, onSnapshot } = await import(“https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js”);
-const db = await getDb();
-return onSnapshot(collection(db, “clients”), snap => cb(snap.docs.map(d => ({ id: d.id, …d.data() }))));
+  const { collection, onSnapshot } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+  const db = await getDb();
+  return onSnapshot(collection(db, "clients"), snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 }
 async function fbSubscribeClient(id, cb) {
-const { doc, onSnapshot } = await import(“https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js”);
-const db = await getDb();
-return onSnapshot(doc(db, “clients”, String(id)), snap => { if (snap.exists()) cb({ id: snap.id, …snap.data() }); });
+  const { doc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+  const db = await getDb();
+  return onSnapshot(doc(db, "clients", String(id)), snap => { if (snap.exists()) cb({ id: snap.id, ...snap.data() }); });
 }
 async function seedIfEmpty() {
-const { collection, getDocs, doc, setDoc } = await import(“https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js”);
-const db = await getDb();
-const snap = await getDocs(collection(db, “clients”));
-if (!snap.empty) return;
-for (const client of defaultClients) await setDoc(doc(db, “clients”, String(client.id)), client);
-await setDoc(doc(db, “settings”, “trainer”), DEFAULT_TRAINER);
+  const { collection, getDocs, doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+  const db = await getDb();
+  const snap = await getDocs(collection(db, "clients"));
+  if (!snap.empty) return;
+  for (const client of defaultClients) await setDoc(doc(db, "clients", String(client.id)), client);
+  await setDoc(doc(db, "settings", "trainer"), DEFAULT_TRAINER);
 }
 
 // ─── UNIFIED API (auto-picks Firebase or localStorage) ───────────────────────
@@ -102,1019 +142,995 @@ const db_getTrainer = () => USE_FIREBASE ? fbGetTrainer() : Promise.resolve(lsGe
 const db_saveTrainer = (t) => { if (USE_FIREBASE) return fbSaveTrainer(t); lsSaveTrainer(t); return Promise.resolve(); };
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const GOALS = [“Muscle Gain”, “Weight Loss”, “Endurance”, “Flexibility”, “Athletic Performance”, “General Fitness”];
-const LEVELS = [“Beginner”, “Intermediate”, “Advanced”];
-const DAYS_OF_WEEK = [“Monday”, “Tuesday”, “Wednesday”, “Thursday”, “Friday”, “Saturday”, “Sunday”];
-const DAY_COLORS = { Monday: “#f97316”, Tuesday: “#06b6d4”, Wednesday: “#8b5cf6”, Thursday: “#10b981”, Friday: “#f59e0b”, Saturday: “#ec4899”, Sunday: “#6366f1” };
-const DEFAULT_TRAINER = { email: “trainer@fitbyanubhav.com”, password: “trainer123”, name: “Coach Anubhav” };
+const GOALS = ["Muscle Gain", "Weight Loss", "Endurance", "Flexibility", "Athletic Performance", "General Fitness"];
+const LEVELS = ["Beginner", "Intermediate", "Advanced"];
+const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const DAY_COLORS = { Monday: "#f97316", Tuesday: "#06b6d4", Wednesday: "#8b5cf6", Thursday: "#10b981", Friday: "#f59e0b", Saturday: "#ec4899", Sunday: "#6366f1" };
+const DEFAULT_TRAINER = { email: "trainer@fitbyanubhav.com", password: "trainer123", name: "Coach Anubhav" };
 
 // ─── DEFAULT CLIENT DATA (seed) ───────────────────────────────────────────────
 const defaultClients = [
-{
-id: “1”,
-name: “Rishika”,
-email: “rishika@client.com”,
-password: “rishika123”,
-phone: “555-0101”,
-age: “28”,
-goal: “Muscle Gain”,
-level: “Intermediate”,
-joinDate: “2026-01-15”,
-weight: “84 kg”,
-plan: {
-name: “Rishika's Personalised Plan”,
-weeks: 8,
-notes: “Push yourself because no one else is going to do it for you.”,
-days: [
-{ day: “Monday”, focus: “Chest, Shoulders & Core”, exercises: [“Treadmill inclined walk”, “Jumping jacks 20x3”, “Mountain climbers 20x3”, “Plank 45sec x3”, “Russian twist 20x3”, “Dumbell bench press 12x3”, “Inclined Dumbell press 12x3”, “Shoulder press 12x4”, “Triceps pushdown 12x4”, “Lateral Dumbell Raises 12x4”, “Front Dumbell raises 12x4”] },
-{ day: “Wednesday”, focus: “Legs”, exercises: [“Treadmill inclined walk”, “Jumping jacks 20x3”, “Free squats 20x3”, “Lunges 20x3”, “Leg press 10x3”, “Calf raises 20x3”, “Leg extension 12x4”, “Sumo Squats 12x4”] },
-{ day: “Friday”, focus: “Back & Biceps”, exercises: [“Treadmill inclined walk”, “Lats pulldown 12x3”, “Seated rowing 12x3”, “Dumbell rowing 12x3”, “Dumbell curls 12x4”, “Barbell curls 10x4”, “Reverse fly 12x4”] },
-{ day: “Tuesday”, focus: “Running — Intervals”, exercises: [“2km warmup”, “Speed run 800m x6”, “2km cool-down run”, “Free squats 20x4”, “120sec break between speed runs”] },
-{ day: “Thursday”, focus: “Running — Fartlek”, exercises: [“2km easy run”, “1km faster + 1km easy (x4)”, “Lunges 20x4”] },
-{ day: “Saturday”, focus: “Long Run”, exercises: [“10-12km long run”] },
-{ day: “Sunday”, focus: “Recovery Run”, exercises: [“5km recovery run”] },
-],
-},
-},
-{
-id: “2”,
-name: “Neyha S”,
-email: “neyha@client.com”,
-password: “neyha123”,
-phone: “9021183651”,
-age: “”,
-goal: “Athletic Performance”,
-level: “Intermediate”,
-joinDate: “2026-02-01”,
-weight: “57 kg”,
-height: “5'4"”,
-diet: “Vegan (90%)”,
-medicalHistory: “Hypothyroidism (75mg tablet), Osteoarthritis, Low BP, Premenopausal stage”,
-goals: “42km & Ultra Marathon, Hyrox, Yoddha Events, 5/10/21km Races, Strength & Conditioning, Overall Fitness, Stress Management”,
-lifestyle: “Non-smoker, Rarely drinks alcohol”,
-plan: {
-name: “Neyha's Personalised Plan”,
-weeks: 8,
-notes: “Push yourself because no one else is going to do it for you.”,
-days: [
-{ day: “Monday”, focus: “Chest, Shoulders & Core”, exercises: [“Treadmill inclined walk”, “Jumping jacks 20x3”, “Mountain climbers 20x3”, “Plank 45sec x3”, “Russian twist 20x3”, “Dumbell bench press 12x3”, “Inclined Dumbell press 12x3”, “Shoulder press 12x4”, “Triceps pushdown 12x4”, “Lateral Dumbell Raises 12x4”, “Front Dumbell raises 12x4”] },
-{ day: “Wednesday”, focus: “Legs”, exercises: [“Treadmill inclined walk”, “Jumping jacks 20x3”, “Free squats 20x3”, “Lunges 20x3”, “Leg press 10x3”, “Calf raises 20x3”, “Leg extension 12x4”, “Sumo Squats 12x4”] },
-{ day: “Friday”, focus: “Back & Biceps”, exercises: [“Treadmill inclined walk”, “Lats pulldown 12x3”, “Seated rowing 12x3”, “Dumbell rowing 12x3”, “Dumbell curls 12x4”, “Barbell curls 10x4”, “Reverse fly 12x4”] },
-{ day: “Tuesday”, focus: “Running — Intervals”, exercises: [“2km warmup”, “Speed run 800m x6”, “2km cool-down run”, “Free squats 20x4”, “120sec break between speed runs”] },
-{ day: “Thursday”, focus: “Running — Fartlek”, exercises: [“2km easy run”, “1km faster + 1km easy (x4)”, “Lunges 20x4”] },
-{ day: “Saturday”, focus: “Long Run”, exercises: [“10-12km long run”] },
-{ day: “Sunday”, focus: “Recovery Run”, exercises: [“5km recovery run”] },
-],
-},
-},
+  {
+    id: "1",
+    name: "Rishika",
+    email: "rishika@client.com",
+    password: "rishika123",
+    phone: "555-0101",
+    age: "28",
+    goal: "Muscle Gain",
+    level: "Intermediate",
+    joinDate: "2026-01-15",
+    weight: "84 kg",
+    plan: {
+      name: "Rishika\'s Personalised Plan",
+      weeks: 8,
+      notes: "Push yourself because no one else is going to do it for you.",
+      days: [
+        { day: "Monday", focus: "Chest, Shoulders & Core", exercises: ["Treadmill inclined walk", "Jumping jacks 20x3", "Mountain climbers 20x3", "Plank 45sec x3", "Russian twist 20x3", "Dumbell bench press 12x3", "Inclined Dumbell press 12x3", "Shoulder press 12x4", "Triceps pushdown 12x4", "Lateral Dumbell Raises 12x4", "Front Dumbell raises 12x4"] },
+        { day: "Wednesday", focus: "Legs", exercises: ["Treadmill inclined walk", "Jumping jacks 20x3", "Free squats 20x3", "Lunges 20x3", "Leg press 10x3", "Calf raises 20x3", "Leg extension 12x4", "Sumo Squats 12x4"] },
+        { day: "Friday", focus: "Back & Biceps", exercises: ["Treadmill inclined walk", "Lats pulldown 12x3", "Seated rowing 12x3", "Dumbell rowing 12x3", "Dumbell curls 12x4", "Barbell curls 10x4", "Reverse fly 12x4"] },
+        { day: "Tuesday", focus: "Running — Intervals", exercises: ["2km warmup", "Speed run 800m x6", "2km cool-down run", "Free squats 20x4", "120sec break between speed runs"] },
+        { day: "Thursday", focus: "Running — Fartlek", exercises: ["2km easy run", "1km faster + 1km easy (x4)", "Lunges 20x4"] },
+        { day: "Saturday", focus: "Long Run", exercises: ["10-12km long run"] },
+        { day: "Sunday", focus: "Recovery Run", exercises: ["5km recovery run"] },
+      ],
+    },
+  },
+  {
+    id: "2",
+    name: "Neyha S",
+    email: "neyha@client.com",
+    password: "neyha123",
+    phone: "9021183651",
+    age: "",
+    goal: "Athletic Performance",
+    level: "Intermediate",
+    joinDate: "2026-02-01",
+    weight: "57 kg",
+    height: "5\'4\"",
+    diet: "Vegan (90%)",
+    medicalHistory: "Hypothyroidism (75mg tablet), Osteoarthritis, Low BP, Premenopausal stage",
+    goals: "42km & Ultra Marathon, Hyrox, Yoddha Events, 5/10/21km Races, Strength & Conditioning, Overall Fitness, Stress Management",
+    lifestyle: "Non-smoker, Rarely drinks alcohol",
+    plan: {
+      name: "Neyha\'s Personalised Plan",
+      weeks: 8,
+      notes: "Push yourself because no one else is going to do it for you.",
+      days: [
+        { day: "Monday", focus: "Chest, Shoulders & Core", exercises: ["Treadmill inclined walk", "Jumping jacks 20x3", "Mountain climbers 20x3", "Plank 45sec x3", "Russian twist 20x3", "Dumbell bench press 12x3", "Inclined Dumbell press 12x3", "Shoulder press 12x4", "Triceps pushdown 12x4", "Lateral Dumbell Raises 12x4", "Front Dumbell raises 12x4"] },
+        { day: "Wednesday", focus: "Legs", exercises: ["Treadmill inclined walk", "Jumping jacks 20x3", "Free squats 20x3", "Lunges 20x3", "Leg press 10x3", "Calf raises 20x3", "Leg extension 12x4", "Sumo Squats 12x4"] },
+        { day: "Friday", focus: "Back & Biceps", exercises: ["Treadmill inclined walk", "Lats pulldown 12x3", "Seated rowing 12x3", "Dumbell rowing 12x3", "Dumbell curls 12x4", "Barbell curls 10x4", "Reverse fly 12x4"] },
+        { day: "Tuesday", focus: "Running — Intervals", exercises: ["2km warmup", "Speed run 800m x6", "2km cool-down run", "Free squats 20x4", "120sec break between speed runs"] },
+        { day: "Thursday", focus: "Running — Fartlek", exercises: ["2km easy run", "1km faster + 1km easy (x4)", "Lunges 20x4"] },
+        { day: "Saturday", focus: "Long Run", exercises: ["10-12km long run"] },
+        { day: "Sunday", focus: "Recovery Run", exercises: ["5km recovery run"] },
+      ],
+    },
+  },
 ];
 
 // ─── PHOTO CONSTANTS ───────────────────────────────────────────────────────────
-const PHOTO_DUMBBELL = “https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=400&q=80”;
-const PHOTO_SLED = “https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&q=80”;
-const PHOTO_BACK = “https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400&q=80”;
+const PHOTO_DUMBBELL = "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=400&q=80";
+const PHOTO_SLED = "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&q=80";
+const PHOTO_BACK = "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400&q=80";
+
 
 const inp = (extra = {}) => ({
-background: “rgba(255,255,255,0.06)”, border: “1px solid rgba(255,255,255,0.12)”,
-borderRadius: 10, color: “white”, padding: “11px 14px”, fontSize: 14,
-width: “100%”, boxSizing: “border-box”, outline: “none”,
-fontFamily: “inherit”, transition: “border-color 0.2s”, …extra,
+  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: 10, color: "white", padding: "11px 14px", fontSize: 14,
+  width: "100%", boxSizing: "border-box", outline: "none",
+  fontFamily: "inherit", transition: "border-color 0.2s", ...extra,
 });
 
 function Badge({ text }) {
-const palette = {
-“Muscle Gain”: [”#f97316”,”#431407”], “Weight Loss”: [”#06b6d4”,”#0a2535”],
-“Endurance”: [”#10b981”,”#052e1c”], “Flexibility”: [”#8b5cf6”,”#2e1065”],
-“Athletic Performance”: [”#f59e0b”,”#341a00”], “General Fitness”: [”#6366f1”,”#1e1b4b”],
-Beginner: [”#10b981”,”#052e1c”], Intermediate: [”#f59e0b”,”#341a00”], Advanced: [”#ef4444”,”#3b0000”],
-};
-const [fg, bg] = palette[text] || [”#94a3b8”, “#1e293b”];
-return <span style={{ background: bg, color: fg, border: `1px solid ${fg}44`, borderRadius: 20, fontSize: 11, padding: “3px 10px”, fontWeight: 700, letterSpacing: 0.5 }}>{text}</span>;
+  const palette = {
+    "Muscle Gain": ["#f97316","#431407"], "Weight Loss": ["#06b6d4","#0a2535"],
+    "Endurance": ["#10b981","#052e1c"], "Flexibility": ["#8b5cf6","#2e1065"],
+    "Athletic Performance": ["#f59e0b","#341a00"], "General Fitness": ["#6366f1","#1e1b4b"],
+    Beginner: ["#10b981","#052e1c"], Intermediate: ["#f59e0b","#341a00"], Advanced: ["#ef4444","#3b0000"],
+  };
+  const [fg, bg] = palette[text] || ["#94a3b8", "#1e293b"];
+  return <span style={{ background: bg, color: fg, border: `1px solid ${fg}44`, borderRadius: 20, fontSize: 11, padding: "3px 10px", fontWeight: 700, letterSpacing: 0.5 }}>{text}</span>;
 }
 
 function hexToRgb(hex) {
-const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-return `${r},${g},${b}`;
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `${r},${g},${b}`;
 }
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
-const [mode, setMode] = useState(“client”);
-const [email, setEmail] = useState(””);
-const [password, setPassword] = useState(””);
-const [error, setError] = useState(””);
-const [show, setShow] = useState(false);
+  const [mode, setMode] = useState("client");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [show, setShow] = useState(false);
 
-const [loggingIn, setLoggingIn] = useState(false);
+  const [loggingIn, setLoggingIn] = useState(false);
 
-const handleLogin = async () => {
-setError(””); setLoggingIn(true);
-try {
-if (mode === “trainer”) {
-const trainer = await db_getTrainer();
-if (email === trainer.email && password === trainer.password) onLogin({ role: “trainer”, user: trainer });
-else setError(“Invalid trainer credentials.”);
-} else {
-const clients = await db_getClients();
-const client = clients.find(c => c.email === email && c.password === password);
-if (client) onLogin({ role: “client”, user: client });
-else setError(“No account found with those credentials.”);
-}
-} catch(e) {
-setError(“Connection error. Please check your internet.”);
-}
-setLoggingIn(false);
-};
+  const handleLogin = async () => {
+    setError(""); setLoggingIn(true);
+    try {
+      if (mode === "trainer") {
+        const trainer = await db_getTrainer();
+        if (email === trainer.email && password === trainer.password) onLogin({ role: "trainer", user: trainer });
+        else setError("Invalid trainer credentials.");
+      } else {
+        const clients = await db_getClients();
+        const client = clients.find(c => c.email === email && c.password === password);
+        if (client) onLogin({ role: "client", user: client });
+        else setError("No account found with those credentials.");
+      }
+    } catch(e) {
+      setError("Connection error. Please check your internet.");
+    }
+    setLoggingIn(false);
+  };
 
-return (
-<div style={{ minHeight: “100vh”, background: “#060a10”, display: “flex”, alignItems: “center”, justifyContent: “center”, fontFamily: “'DM Sans', sans-serif”, position: “relative”, overflow: “hidden” }}>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
-<div style={{ position: “absolute”, top: -100, left: -100, width: 500, height: 500, background: “radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)”, pointerEvents: “none” }} />
-<div style={{ position: “absolute”, bottom: -100, right: -100, width: 500, height: 500, background: “radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)”, pointerEvents: “none” }} />
-<div style={{ width: “100%”, maxWidth: 420, padding: 20 }}>
-<div style={{ textAlign: “center”, marginBottom: 36 }}>
-<div style={{ position: “relative”, display: “inline-block”, marginBottom: 14 }}>
-<div style={{ width: 90, height: 90, borderRadius: “50%”, overflow: “hidden”, border: “3px solid #6366f1”, boxShadow: “0 0 30px rgba(99,102,241,0.5)” }}>
-<img src={PHOTO_SLED} alt=“Coach Anubhav” style={{ width: “100%”, height: “100%”, objectFit: “cover”, objectPosition: “70% 20%” }} />
-</div>
-<div style={{ position: “absolute”, bottom: 2, right: 2, width: 22, height: 22, background: “linear-gradient(135deg,#6366f1,#8b5cf6)”, borderRadius: “50%”, display: “flex”, alignItems: “center”, justifyContent: “center”, fontSize: 11, border: “2px solid #060a10” }}>⚡</div>
-</div>
-<div style={{ fontFamily: “'Bebas Neue', sans-serif”, fontSize: 38, letterSpacing: 4, background: “linear-gradient(135deg,#818cf8,#c084fc)”, WebkitBackgroundClip: “text”, WebkitTextFillColor: “transparent” }}>FitByAnubhav</div>
-<div style={{ color: “#475569”, fontSize: 13, marginTop: 4 }}>Your personal training platform</div>
-</div>
-<div style={{ display: “flex”, background: “rgba(255,255,255,0.05)”, borderRadius: 12, padding: 4, marginBottom: 24, border: “1px solid rgba(255,255,255,0.08)” }}>
-{[“trainer”,“client”].map(m => (
-<button key={m} onClick={() => { setMode(m); setError(””); setEmail(””); setPassword(””); }}
-style={{ flex: 1, padding: “10px”, border: “none”, borderRadius: 9, cursor: “pointer”, fontWeight: 600, fontSize: 13, fontFamily: “inherit”, transition: “all 0.2s”, textTransform: “capitalize”,
-background: mode === m ? “linear-gradient(135deg,#6366f1,#8b5cf6)” : “transparent”,
-color: mode === m ? “white” : “#64748b”,
-boxShadow: mode === m ? “0 4px 15px rgba(99,102,241,0.3)” : “none” }}>
-{m === “trainer” ? “🏋️ Trainer” : “👤 Client”}
-</button>
-))}
-</div>
-<div style={{ background: “rgba(15,23,42,0.9)”, border: “1px solid rgba(99,102,241,0.2)”, borderRadius: 20, padding: 28, backdropFilter: “blur(20px)” }}>
-<div style={{ marginBottom: 20, color: “#94a3b8”, fontSize: 13 }}>
-{mode === “trainer” ? “Sign in to manage your clients and training plans.” : “Sign in to view your weekly workout plan.”}
-</div>
-<div style={{ marginBottom: 14 }}>
-<label style={{ fontSize: 11, color: “#64748b”, textTransform: “uppercase”, letterSpacing: 1, display: “block”, marginBottom: 6 }}>Email</label>
-<input style={inp()} type=“email” value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === “Enter” && handleLogin()}
-placeholder={mode === “trainer” ? “trainer@fitbyanubhav.com” : “your@email.com”} />
-</div>
-<div style={{ marginBottom: 6 }}>
-<label style={{ fontSize: 11, color: “#64748b”, textTransform: “uppercase”, letterSpacing: 1, display: “block”, marginBottom: 6 }}>Password</label>
-<div style={{ position: “relative” }}>
-<input style={inp({ paddingRight: 44 })} type={show ? “text” : “password”} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === “Enter” && handleLogin()} placeholder=”••••••••” />
-<button onClick={() => setShow(!show)} style={{ position: “absolute”, right: 12, top: “50%”, transform: “translateY(-50%)”, background: “none”, border: “none”, color: “#475569”, cursor: “pointer”, fontSize: 16 }}>{show ? “🙈” : “👁”}</button>
-</div>
-</div>
-{error && <div style={{ background: “rgba(239,68,68,0.1)”, border: “1px solid rgba(239,68,68,0.3)”, color: “#f87171”, borderRadius: 8, padding: “8px 12px”, fontSize: 13, marginBottom: 12 }}>{error}</div>}
-<button onClick={handleLogin} style={{ width: “100%”, background: “linear-gradient(135deg,#6366f1,#8b5cf6)”, border: “none”, color: “white”, borderRadius: 12, padding: “13px”, fontWeight: 700, fontSize: 15, cursor: “pointer”, marginTop: 8, fontFamily: “inherit”, boxShadow: “0 4px 20px rgba(99,102,241,0.4)” }}>{loggingIn ? “Signing in…” : “Sign In →”}</button>
+  return (
+    <div style={{ minHeight: "100vh", background: "#060a10", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "\'DM Sans\', sans-serif", position: "relative", overflow: "hidden" }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+      <div style={{ position: "absolute", top: -100, left: -100, width: 500, height: 500, background: "radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: -100, right: -100, width: 500, height: 500, background: "radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ width: "100%", maxWidth: 420, padding: 20 }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div style={{ position: "relative", display: "inline-block", marginBottom: 14 }}>
+            <div style={{ width: 90, height: 90, borderRadius: "50%", overflow: "hidden", border: "3px solid #6366f1", boxShadow: "0 0 30px rgba(99,102,241,0.5)" }}>
+              <img src={PHOTO_SLED} alt="Coach Anubhav" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "70% 20%" }} />
+            </div>
+            <div style={{ position: "absolute", bottom: 2, right: 2, width: 22, height: 22, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, border: "2px solid #060a10" }}>⚡</div>
+          </div>
+          <div style={{ fontFamily: "\'Bebas Neue\', sans-serif", fontSize: 38, letterSpacing: 4, background: "linear-gradient(135deg,#818cf8,#c084fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>FitByAnubhav</div>
+          <div style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Your personal training platform</div>
+        </div>
+        <div style={{ display: "flex", background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4, marginBottom: 24, border: "1px solid rgba(255,255,255,0.08)" }}>
+          {["trainer","client"].map(m => (
+            <button key={m} onClick={() => { setMode(m); setError(""); setEmail(""); setPassword(""); }}
+              style={{ flex: 1, padding: "10px", border: "none", borderRadius: 9, cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "inherit", transition: "all 0.2s", textTransform: "capitalize",
+                background: mode === m ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
+                color: mode === m ? "white" : "#64748b",
+                boxShadow: mode === m ? "0 4px 15px rgba(99,102,241,0.3)" : "none" }}>
+              {m === "trainer" ? "🏋️ Trainer" : "👤 Client"}
+            </button>
+          ))}
+        </div>
+        <div style={{ background: "rgba(15,23,42,0.9)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 20, padding: 28, backdropFilter: "blur(20px)" }}>
+          <div style={{ marginBottom: 20, color: "#94a3b8", fontSize: 13 }}>
+            {mode === "trainer" ? "Sign in to manage your clients and training plans." : "Sign in to view your weekly workout plan."}
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Email</label>
+            <input style={inp()} type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()}
+              placeholder={mode === "trainer" ? "trainer@fitbyanubhav.com" : "your@email.com"} />
+          </div>
+          <div style={{ marginBottom: 6 }}>
+            <label style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Password</label>
+            <div style={{ position: "relative" }}>
+              <input style={inp({ paddingRight: 44 })} type={show ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="••••••••" />
+              <button onClick={() => setShow(!show)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 16 }}>{show ? "🙈" : "👁"}</button>
+            </div>
+          </div>
+          {error && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", borderRadius: 8, padding: "8px 12px", fontSize: 13, marginBottom: 12 }}>{error}</div>}
+          <button onClick={handleLogin} style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "white", borderRadius: 12, padding: "13px", fontWeight: 700, fontSize: 15, cursor: "pointer", marginTop: 8, fontFamily: "inherit", boxShadow: "0 4px 20px rgba(99,102,241,0.4)" }}>{loggingIn ? "Signing in..." : "Sign In →"}</button>
 
-```
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-```
-
-);
+  );
 }
 
 // ─── PROGRESS TRACKER ─────────────────────────────────────────────────────────
 function ProgressTracker({ clientId }) {
-const PROG_KEY = “fitbyanubhav-progress-” + clientId;
-const loadProg = () => { try { const r = localStorage.getItem(PROG_KEY); return r ? JSON.parse(r) : []; } catch { return []; } };
-const saveProg = (d) => { try { localStorage.setItem(PROG_KEY, JSON.stringify(d)); } catch {} };
-const [entries, setEntries] = useState(loadProg);
-const [form, setForm] = useState({ date: new Date().toISOString().split(“T”)[0], weight: “”, chest: “”, waist: “”, hips: “”, note: “” });
-const [showForm, setShowForm] = useState(false);
+  const PROG_KEY = "fitbyanubhav-progress-" + clientId;
+  const loadProg = () => { try { const r = localStorage.getItem(PROG_KEY); return r ? JSON.parse(r) : []; } catch { return []; } };
+  const saveProg = (d) => { try { localStorage.setItem(PROG_KEY, JSON.stringify(d)); } catch {} };
+  const [entries, setEntries] = useState(loadProg);
+  const [form, setForm] = useState({ date: new Date().toISOString().split("T")[0], weight: "", chest: "", waist: "", hips: "", note: "" });
+  const [showForm, setShowForm] = useState(false);
 
-const addEntry = () => {
-if (!form.weight && !form.chest && !form.waist && !form.hips) return;
-const updated = […entries, { …form, id: Date.now() }].sort((a, b) => a.date.localeCompare(b.date));
-setEntries(updated); saveProg(updated);
-setForm({ date: new Date().toISOString().split(“T”)[0], weight: “”, chest: “”, waist: “”, hips: “”, note: “” });
-setShowForm(false);
-};
-const deleteEntry = (id) => { const u = entries.filter(e => e.id !== id); setEntries(u); saveProg(u); };
+  const addEntry = () => {
+    if (!form.weight && !form.chest && !form.waist && !form.hips) return;
+    const updated = [...entries, { ...form, id: Date.now() }].sort((a, b) => a.date.localeCompare(b.date));
+    setEntries(updated); saveProg(updated);
+    setForm({ date: new Date().toISOString().split("T")[0], weight: "", chest: "", waist: "", hips: "", note: "" });
+    setShowForm(false);
+  };
+  const deleteEntry = (id) => { const u = entries.filter(e => e.id !== id); setEntries(u); saveProg(u); };
 
-const metrics = [
-{ key: “weight”, label: “Weight”, unit: “kg”, color: “#818cf8” },
-{ key: “chest”, label: “Chest”, unit: “cm”, color: “#f97316” },
-{ key: “waist”, label: “Waist”, unit: “cm”, color: “#10b981” },
-{ key: “hips”, label: “Hips”, unit: “cm”, color: “#ec4899” },
-];
+  const metrics = [
+    { key: "weight", label: "Weight", unit: "kg", color: "#818cf8" },
+    { key: "chest", label: "Chest", unit: "cm", color: "#f97316" },
+    { key: "waist", label: "Waist", unit: "cm", color: "#10b981" },
+    { key: "hips", label: "Hips", unit: "cm", color: "#ec4899" },
+  ];
 
-const ChartLine = ({ metric }) => {
-const pts = entries.filter(e => e[metric.key]).map(e => ({ date: e.date, val: parseFloat(e[metric.key]) }));
-if (pts.length < 2) return <div style={{ color: “#334155”, fontSize: 12, padding: “8px 0” }}>Log at least 2 entries to see chart</div>;
-const min = Math.min(…pts.map(p => p.val)) * 0.97;
-const max = Math.max(…pts.map(p => p.val)) * 1.03;
-const W = 400, H = 80;
-const x = (i) => (i / (pts.length - 1)) * (W - 20) + 10;
-const y = (v) => H - ((v - min) / (max - min)) * (H - 12) - 6;
-const path = pts.map((p, i) => (i === 0 ? “M” : “L”) + “ “ + x(i) + “ “ + y(p.val)).join(” “);
-const diff = pts[pts.length-1].val - pts[0].val;
-return (
-<div style={{ marginBottom: 6 }}>
-<div style={{ display: “flex”, justifyContent: “space-between”, marginBottom: 4 }}>
-<span style={{ fontSize: 12, color: metric.color, fontWeight: 700 }}>{metric.label} ({metric.unit})</span>
-<span style={{ fontSize: 12, color: diff < 0 ? “#10b981” : diff > 0 ? “#f97316” : “#64748b” }}>{diff > 0 ? “+” : “”}{diff.toFixed(1)} overall</span>
-</div>
-<svg width=“100%” viewBox={“0 0 “ + W + “ “ + H} style={{ overflow: “visible” }}>
-<defs><linearGradient id={“g” + metric.key} x1=“0” y1=“0” x2=“0” y2=“1”><stop offset="0%" stopColor={metric.color} stopOpacity="0.25" /><stop offset="100%" stopColor={metric.color} stopOpacity="0" /></linearGradient></defs>
-<path d={path + “ L “ + x(pts.length-1) + “ “ + H + “ L “ + x(0) + “ “ + H + “ Z”} fill={“url(#g” + metric.key + “)”} />
-<path d={path} fill="none" stroke={metric.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-{pts.map((p, i) => <g key={i}><circle cx={x(i)} cy={y(p.val)} r="3" fill={metric.color} /><text x={x(i)} y={y(p.val)-7} textAnchor="middle" fill="#94a3b8" fontSize="9">{p.val}</text></g>)}
-</svg>
-<div style={{ display: “flex”, justifyContent: “space-between”, fontSize: 10, color: “#475569”, marginTop: 2 }}>
-{pts.map((p, i) => <span key={i}>{p.date.slice(5)}</span>)}
-</div>
-</div>
-);
-};
+  const ChartLine = ({ metric }) => {
+    const pts = entries.filter(e => e[metric.key]).map(e => ({ date: e.date, val: parseFloat(e[metric.key]) }));
+    if (pts.length < 2) return <div style={{ color: "#334155", fontSize: 12, padding: "8px 0" }}>Log at least 2 entries to see chart</div>;
+    const min = Math.min(...pts.map(p => p.val)) * 0.97;
+    const max = Math.max(...pts.map(p => p.val)) * 1.03;
+    const W = 400, H = 80;
+    const x = (i) => (i / (pts.length - 1)) * (W - 20) + 10;
+    const y = (v) => H - ((v - min) / (max - min)) * (H - 12) - 6;
+    const path = pts.map((p, i) => (i === 0 ? "M" : "L") + " " + x(i) + " " + y(p.val)).join(" ");
+    const diff = pts[pts.length-1].val - pts[0].val;
+    return (
+      <div style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+          <span style={{ fontSize: 12, color: metric.color, fontWeight: 700 }}>{metric.label} ({metric.unit})</span>
+          <span style={{ fontSize: 12, color: diff < 0 ? "#10b981" : diff > 0 ? "#f97316" : "#64748b" }}>{diff > 0 ? "+" : ""}{diff.toFixed(1)} overall</span>
+        </div>
+        <svg width="100%" viewBox={"0 0 " + W + " " + H} style={{ overflow: "visible" }}>
+          <defs><linearGradient id={"g" + metric.key} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={metric.color} stopOpacity="0.25" /><stop offset="100%" stopColor={metric.color} stopOpacity="0" /></linearGradient></defs>
+          <path d={path + " L " + x(pts.length-1) + " " + H + " L " + x(0) + " " + H + " Z"} fill={"url(#g" + metric.key + ")"} />
+          <path d={path} fill="none" stroke={metric.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          {pts.map((p, i) => <g key={i}><circle cx={x(i)} cy={y(p.val)} r="3" fill={metric.color} /><text x={x(i)} y={y(p.val)-7} textAnchor="middle" fill="#94a3b8" fontSize="9">{p.val}</text></g>)}
+        </svg>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#475569", marginTop: 2 }}>
+          {pts.map((p, i) => <span key={i}>{p.date.slice(5)}</span>)}
+        </div>
+      </div>
+    );
+  };
 
-return (
-<div style={{ marginTop: 8 }}>
-<div style={{ display: “flex”, alignItems: “center”, justifyContent: “space-between”, marginBottom: 18 }}>
-<div>
-<div style={{ fontSize: 18, fontWeight: 700 }}>📈 Progress Tracker</div>
-<div style={{ fontSize: 13, color: “#475569”, marginTop: 2 }}>Log your measurements & see your results</div>
-</div>
-<button onClick={() => setShowForm(!showForm)} style={{ background: “linear-gradient(135deg,#6366f1,#8b5cf6)”, border: “none”, color: “white”, borderRadius: 10, padding: “9px 16px”, fontWeight: 700, fontSize: 13, cursor: “pointer”, fontFamily: “inherit” }}>
-{showForm ? “Cancel” : “+ Log Today”}
-</button>
-</div>
-{showForm && (
-<div style={{ background: “rgba(15,23,42,0.9)”, border: “1px solid rgba(99,102,241,0.25)”, borderRadius: 16, padding: 20, marginBottom: 20 }}>
-<div style={{ fontSize: 13, fontWeight: 700, color: “#818cf8”, marginBottom: 14 }}>New Entry</div>
-<div style={{ display: “grid”, gridTemplateColumns: “1fr 1fr”, gap: 12, marginBottom: 14 }}>
-{[[“Date”,“date”,“date”],[“Weight (kg)”,“weight”,“number”],[“Chest (cm)”,“chest”,“number”],[“Waist (cm)”,“waist”,“number”],[“Hips (cm)”,“hips”,“number”],[“Note”,“note”,“text”]].map(([l,f,t]) => (
-<div key={f}>
-<label style={{ fontSize: 10, color: “#64748b”, textTransform: “uppercase”, letterSpacing: 1, display: “block”, marginBottom: 5 }}>{l}</label>
-<input type={t} style={inp()} placeholder={{“weight”:“e.g. 57”,“chest”:“e.g. 88”,“waist”:“e.g. 72”,“hips”:“e.g. 94”,“note”:“feeling strong!”}[f] || “”} value={form[f]} onChange={e => setForm({…form,[f]:e.target.value})} />
-</div>
-))}
-</div>
-<button onClick={addEntry} style={{ background: “linear-gradient(135deg,#6366f1,#8b5cf6)”, border: “none”, color: “white”, borderRadius: 10, padding: “10px 20px”, fontWeight: 700, fontSize: 13, cursor: “pointer”, fontFamily: “inherit” }}>Save Entry ✓</button>
-</div>
-)}
-{entries.length === 0 ? (
-<div style={{ background: “rgba(15,23,42,0.6)”, border: “1px solid rgba(255,255,255,0.06)”, borderRadius: 16, padding: “40px 20px”, textAlign: “center” }}>
-<div style={{ fontSize: 36, marginBottom: 10 }}>📊</div>
-<div style={{ fontSize: 15, color: “#475569” }}>No entries yet — hit “Log Today” to start!</div>
-</div>
-) : (
-<>
-<div style={{ background: “rgba(15,23,42,0.8)”, border: “1px solid rgba(255,255,255,0.07)”, borderRadius: 16, padding: “18px 20px”, marginBottom: 16 }}>
-<div style={{ fontSize: 11, color: “#475569”, textTransform: “uppercase”, letterSpacing: 1, fontWeight: 600, marginBottom: 18 }}>Progress Charts</div>
-<div style={{ display: “flex”, flexDirection: “column”, gap: 22 }}>{metrics.map(m => <ChartLine key={m.key} metric={m} />)}</div>
-</div>
-<div style={{ fontSize: 11, color: “#475569”, textTransform: “uppercase”, letterSpacing: 1, fontWeight: 600, marginBottom: 10 }}>All Entries</div>
-<div style={{ display: “flex”, flexDirection: “column”, gap: 8 }}>
-{[…entries].reverse().map(e => (
-<div key={e.id} style={{ background: “rgba(15,23,42,0.7)”, border: “1px solid rgba(255,255,255,0.06)”, borderRadius: 12, padding: “12px 16px”, display: “flex”, alignItems: “center”, gap: 14, flexWrap: “wrap” }}>
-<div style={{ fontSize: 12, color: “#6366f1”, fontWeight: 700, minWidth: 80 }}>{e.date}</div>
-<div style={{ display: “flex”, gap: 12, flex: 1, flexWrap: “wrap” }}>
-{metrics.map(m => e[m.key] ? <span key={m.key} style={{ fontSize: 12, color: “#94a3b8” }}><span style={{ color: m.color, fontWeight: 700 }}>{m.label}:</span> {e[m.key]} {m.unit}</span> : null)}
-{e.note && <span style={{ fontSize: 12, color: “#475569” }}>”{e.note}”</span>}
-</div>
-<button onClick={() => deleteEntry(e.id)} style={{ background: “rgba(239,68,68,0.08)”, border: “1px solid rgba(239,68,68,0.2)”, color: “#f87171”, borderRadius: 6, padding: “3px 9px”, fontSize: 11, cursor: “pointer” }}>✕</button>
-</div>
-))}
-</div>
-</>
-)}
-</div>
-);
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>📈 Progress Tracker</div>
+          <div style={{ fontSize: 13, color: "#475569", marginTop: 2 }}>Log your measurements & see your results</div>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "white", borderRadius: 10, padding: "9px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+          {showForm ? "Cancel" : "+ Log Today"}
+        </button>
+      </div>
+      {showForm && (
+        <div style={{ background: "rgba(15,23,42,0.9)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 16, padding: 20, marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#818cf8", marginBottom: 14 }}>New Entry</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+            {[["Date","date","date"],["Weight (kg)","weight","number"],["Chest (cm)","chest","number"],["Waist (cm)","waist","number"],["Hips (cm)","hips","number"],["Note","note","text"]].map(([l,f,t]) => (
+              <div key={f}>
+                <label style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>{l}</label>
+                <input type={t} style={inp()} placeholder={{"weight":"e.g. 57","chest":"e.g. 88","waist":"e.g. 72","hips":"e.g. 94","note":"feeling strong!"}[f] || ""} value={form[f]} onChange={e => setForm({...form,[f]:e.target.value})} />
+              </div>
+            ))}
+          </div>
+          <button onClick={addEntry} style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "white", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Save Entry ✓</button>
+        </div>
+      )}
+      {entries.length === 0 ? (
+        <div style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "40px 20px", textAlign: "center" }}>
+          <div style={{ fontSize: 36, marginBottom: 10 }}>📊</div>
+          <div style={{ fontSize: 15, color: "#475569" }}>No entries yet — hit "Log Today" to start!</div>
+        </div>
+      ) : (
+        <>
+          <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "18px 20px", marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600, marginBottom: 18 }}>Progress Charts</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>{metrics.map(m => <ChartLine key={m.key} metric={m} />)}</div>
+          </div>
+          <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600, marginBottom: 10 }}>All Entries</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[...entries].reverse().map(e => (
+              <div key={e.id} style={{ background: "rgba(15,23,42,0.7)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 12, color: "#6366f1", fontWeight: 700, minWidth: 80 }}>{e.date}</div>
+                <div style={{ display: "flex", gap: 12, flex: 1, flexWrap: "wrap" }}>
+                  {metrics.map(m => e[m.key] ? <span key={m.key} style={{ fontSize: 12, color: "#94a3b8" }}><span style={{ color: m.color, fontWeight: 700 }}>{m.label}:</span> {e[m.key]} {m.unit}</span> : null)}
+                  {e.note && <span style={{ fontSize: 12, color: "#475569" }}>"{e.note}"</span>}
+                </div>
+                <button onClick={() => deleteEntry(e.id)} style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", borderRadius: 6, padding: "3px 9px", fontSize: 11, cursor: "pointer" }}>✕</button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 // ─── CLIENT PORTAL ────────────────────────────────────────────────────────────
 function ClientPortal({ user, onLogout }) {
-const [client, setClient] = useState(user);
-const plan = client.plan;
-const today = DAYS_OF_WEEK[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
-const [activeTab, setActiveTab] = useState(“plan”);
-const [syncing, setSyncing] = useState(false);
+  const [client, setClient] = useState(user);
+  const plan = client.plan;
+  const today = DAYS_OF_WEEK[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+  const [activeTab, setActiveTab] = useState("plan");
+  const [syncing, setSyncing] = useState(false);
 
-// Live-sync client data so plan updates show instantly
-useEffect(() => {
-if (USE_FIREBASE) {
-let unsub = null;
-fbSubscribeClient(user.id, updated => setClient(updated))
-.then(u => { unsub = u; })
-.catch(() => {});
-return () => { if (unsub) unsub(); };
-} else {
-// localStorage: poll every 5 seconds for trainer updates
-const refresh = () => {
-const clients = lsGetClients();
-const updated = clients.find(c => c.id === user.id);
-if (updated) setClient(updated);
-};
-refresh();
-const interval = setInterval(refresh, 5000);
-return () => clearInterval(interval);
-}
-}, [user.id]);
+  // Live-sync client data so plan updates show instantly
+  useEffect(() => {
+    if (USE_FIREBASE) {
+      let unsub = null;
+      fbSubscribeClient(user.id, updated => setClient(updated))
+        .then(u => { unsub = u; })
+        .catch(() => {});
+      return () => { if (unsub) unsub(); };
+    } else {
+      // localStorage: poll every 5 seconds for trainer updates
+      const refresh = () => {
+        const clients = lsGetClients();
+        const updated = clients.find(c => c.id === user.id);
+        if (updated) setClient(updated);
+      };
+      refresh();
+      const interval = setInterval(refresh, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [user.id]);
 
-const CHECK_KEY = “fitbyanubhav-checks-” + client.id + “-” + new Date().toISOString().split(“T”)[0];
-const loadChecks = () => { try { const r = localStorage.getItem(CHECK_KEY); return r ? JSON.parse(r) : {}; } catch { return {}; } };
-const [checked, setChecked] = useState(loadChecks);
-const toggleCheck = (dayName, exIdx) => {
-const key = dayName + “-” + exIdx;
-const updated = { …checked, [key]: !checked[key] };
-setChecked(updated);
-try { localStorage.setItem(CHECK_KEY, JSON.stringify(updated)); } catch {}
-};
+  const CHECK_KEY = "fitbyanubhav-checks-" + client.id + "-" + new Date().toISOString().split("T")[0];
+  const loadChecks = () => { try { const r = localStorage.getItem(CHECK_KEY); return r ? JSON.parse(r) : {}; } catch { return {}; } };
+  const [checked, setChecked] = useState(loadChecks);
+  const toggleCheck = (dayName, exIdx) => {
+    const key = dayName + "-" + exIdx;
+    const updated = { ...checked, [key]: !checked[key] };
+    setChecked(updated);
+    try { localStorage.setItem(CHECK_KEY, JSON.stringify(updated)); } catch {}
+  };
 
-const todaySessions = plan?.days?.filter(d => d.day === today) || [];
-const todayDone = todaySessions.reduce((acc, s, si) => acc + s.exercises.filter((_, i) => checked[today + “-” + si + “-” + i]).length, 0);
-const todayTotal = todaySessions.reduce((acc, s) => acc + s.exercises.length, 0);
-const todaySession = todaySessions[0] || null;
+  const todaySessions = plan?.days?.filter(d => d.day === today) || [];
+  const todayDone = todaySessions.reduce((acc, s, si) => acc + s.exercises.filter((_, i) => checked[today + "-" + si + "-" + i]).length, 0);
+  const todayTotal = todaySessions.reduce((acc, s) => acc + s.exercises.length, 0);
+  const todaySession = todaySessions[0] || null;
 
-return (
-<div style={{ minHeight: “100vh”, background: “#060a10”, fontFamily: “'DM Sans', sans-serif”, color: “white” }}>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
-<div style={{ background: “rgba(15,23,42,0.95)”, borderBottom: “1px solid rgba(99,102,241,0.15)”, padding: “0 24px”, display: “flex”, alignItems: “center”, justifyContent: “space-between”, height: 60, backdropFilter: “blur(10px)”, position: “sticky”, top: 0, zIndex: 10 }}>
-<div style={{ display: “flex”, alignItems: “center”, gap: 10 }}>
-<div style={{ width: 30, height: 30, background: “linear-gradient(135deg,#6366f1,#8b5cf6)”, borderRadius: 8, display: “flex”, alignItems: “center”, justifyContent: “center”, fontSize: 14 }}>⚡</div>
-<span style={{ fontFamily: “'Bebas Neue'”, fontSize: 20, letterSpacing: 3, background: “linear-gradient(135deg,#818cf8,#c084fc)”, WebkitBackgroundClip: “text”, WebkitTextFillColor: “transparent” }}>FitByAnubhav</span>
-</div>
-<div style={{ display: “flex”, alignItems: “center”, gap: 12 }}>
-<div style={{ textAlign: “right” }}>
-<div style={{ fontSize: 13, fontWeight: 600, color: “white” }}>{client.name}</div>
-<div style={{ fontSize: 11, color: “#475569”, display: “flex”, alignItems: “center”, gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: “50%”, background: “#10b981”, display: “inline-block” }}></span>Live</div>
-</div>
-<button onClick={onLogout} style={{ background: “rgba(255,255,255,0.06)”, border: “1px solid rgba(255,255,255,0.1)”, color: “#94a3b8”, borderRadius: 8, padding: “6px 12px”, fontSize: 12, cursor: “pointer” }}>Logout</button>
-</div>
-</div>
-
-```
-  <div style={{ maxWidth: 860, margin: "0 auto", padding: "28px 20px" }}>
-    <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 16 }}>
-      <div>
-        <div style={{ fontSize: 26, fontWeight: 700 }}>Hey, {client.name.split(" ")[0]} 👋</div>
-        <div style={{ color: "#475569", fontSize: 14, marginTop: 4 }}>Ready to crush it today?</div>
-      </div>
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, background: "rgba(15,23,42,0.8)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 14, padding: "10px 14px" }}>
-        <div style={{ width: 42, height: 42, borderRadius: "50%", overflow: "hidden", border: "2px solid #6366f1", flexShrink: 0 }}>
-          <img src={PHOTO_SLED} alt="Coach Anubhav" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "70% 20%" }} />
-        </div>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "white" }}>Coach Anubhav</div>
-          <div style={{ fontSize: 11, color: "#475569" }}>Your Trainer</div>
-        </div>
-      </div>
-    </div>
-
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 20 }}>
-      {[["Goal", client.goal], ["Level", client.level], ["Weight", client.weight + (client.height ? " · " + client.height : "")], ["Diet", client.diet || "—"]].map(([l, v]) => (
-        <div key={l} style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "14px 16px" }}>
-          <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: 1 }}>{l}</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", marginTop: 4 }}>{v}</div>
-        </div>
-      ))}
-    </div>
-
-    {client.medicalHistory && (
-      <div style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 14, padding: "12px 16px", marginBottom: 16, display: "flex", gap: 10, alignItems: "flex-start" }}>
-        <span style={{ fontSize: 16, flexShrink: 0 }}>🩺</span>
-        <div>
-          <div style={{ fontSize: 11, color: "#f87171", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700, marginBottom: 3 }}>My Health Profile</div>
-          <div style={{ fontSize: 13, color: "#94a3b8" }}>{client.medicalHistory}</div>
-        </div>
-      </div>
-    )}
-
-    {todaySessions.length > 0 && (
-      <div style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.08))", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 16, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-        <div>
-          <div style={{ fontSize: 11, color: "#6366f1", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>Today — {today}</div>
-          <div style={{ fontSize: 15, fontWeight: 700, marginTop: 4 }}>{todaySessions.map(s => s.focus).join(" + ")}</div>
-        </div>
+  return (
+    <div style={{ minHeight: "100vh", background: "#060a10", fontFamily: "\'DM Sans\', sans-serif", color: "white" }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+      <div style={{ background: "rgba(15,23,42,0.95)", borderBottom: "1px solid rgba(99,102,241,0.15)", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60, backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: todayDone === todayTotal ? "#10b981" : "#818cf8" }}>{todayDone}/{todayTotal}</div>
-            <div style={{ fontSize: 10, color: "#475569" }}>done today</div>
+          <div style={{ width: 30, height: 30, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>⚡</div>
+          <span style={{ fontFamily: "\'Bebas Neue\'", fontSize: 20, letterSpacing: 3, background: "linear-gradient(135deg,#818cf8,#c084fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>FitByAnubhav</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "white" }}>{client.name}</div>
+            <div style={{ fontSize: 11, color: "#475569", display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", display: "inline-block" }}></span>Live</div>
           </div>
-          {todayDone === todayTotal && todayTotal > 0 && <div style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.4)", color: "#10b981", borderRadius: 20, fontSize: 12, padding: "4px 14px", fontWeight: 700 }}>🎉 Complete!</div>}
+          <button onClick={onLogout} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer" }}>Logout</button>
         </div>
       </div>
-    )}
 
-    <div style={{ display: "flex", gap: 4, marginBottom: 22, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-      {[["plan","📋 My Plan"],["progress","📈 Progress"]].map(([t, label]) => (
-        <button key={t} onClick={() => setActiveTab(t)} style={{ padding: "10px 18px", background: "none", border: "none", color: activeTab === t ? "#818cf8" : "#475569", fontWeight: activeTab === t ? 700 : 400, fontSize: 13, cursor: "pointer", borderBottom: activeTab === t ? "2px solid #6366f1" : "2px solid transparent", fontFamily: "inherit" }}>{label}</button>
-      ))}
-    </div>
-
-    {activeTab === "plan" && (
-      plan?.name ? (
-        <>
-          <div style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.06))", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 14, padding: "14px 18px", marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "28px 20px" }}>
+        <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 26, fontWeight: 700 }}>Hey, {client.name.split(" ")[0]} 👋</div>
+            <div style={{ color: "#475569", fontSize: 14, marginTop: 4 }}>Ready to crush it today?</div>
+          </div>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, background: "rgba(15,23,42,0.8)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 14, padding: "10px 14px" }}>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", overflow: "hidden", border: "2px solid #6366f1", flexShrink: 0 }}>
+              <img src={PHOTO_SLED} alt="Coach Anubhav" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "70% 20%" }} />
+            </div>
             <div>
-              <div style={{ fontSize: 11, color: "#6366f1", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>Current Plan</div>
-              <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>{plan.name}</div>
-              {plan.notes && <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>📝 {plan.notes}</div>}
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 26, fontWeight: 800, color: "#818cf8" }}>{plan.weeks}</div>
-              <div style={{ fontSize: 11, color: "#475569" }}>WEEKS</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "white" }}>Coach Anubhav</div>
+              <div style={{ fontSize: 11, color: "#475569" }}>Your Trainer</div>
             </div>
           </div>
-          <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600, marginBottom: 12 }}>Tap exercises to mark them done ✓</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {DAYS_OF_WEEK.map(dayName => {
-              const sessions = plan.days?.filter(d => d.day === dayName) || [];
-              const isToday = dayName === today;
-              const color = DAY_COLORS[dayName];
-              const totalDone = sessions.reduce((acc, s, si) => acc + s.exercises.filter((_, i) => checked[dayName + "-" + si + "-" + i]).length, 0);
-              const totalEx = sessions.reduce((acc, s) => acc + s.exercises.length, 0);
-              return (
-                <div key={dayName} style={{ background: isToday ? "rgba(" + hexToRgb(color) + ",0.07)" : "rgba(15,23,42,0.7)", border: "1px solid " + (isToday ? color + "44" : "rgba(255,255,255,0.06)"), borderRadius: 14, overflow: "hidden" }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", padding: "12px 16px", gap: 12 }}>
-                    <div style={{ width: 5, background: sessions.length ? color : "rgba(255,255,255,0.07)", borderRadius: 3, flexShrink: 0, alignSelf: "stretch", minHeight: 36 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: sessions.length ? 10 : 0 }}>
-                        <span style={{ fontWeight: 700, fontSize: 14, color: sessions.length ? "white" : "#334155" }}>{dayName}</span>
-                        {isToday && <span style={{ background: color + "22", color: color, border: "1px solid " + color + "44", borderRadius: 20, fontSize: 10, padding: "2px 8px", fontWeight: 700 }}>TODAY</span>}
-                        {!sessions.length && <span style={{ fontSize: 12, color: "#334155" }}>💤 Rest & recover today</span>}
-                        {sessions.length > 0 && totalDone > 0 && <span style={{ fontSize: 11, color: totalDone === totalEx ? "#10b981" : "#f59e0b", fontWeight: 600 }}>{totalDone}/{totalEx} ✓</span>}
-                      </div>
-                      {sessions.map((session, si) => (
-                        <div key={si} style={{ marginBottom: si < sessions.length - 1 ? 14 : 0 }}>
-                          <div style={{ fontSize: 11, color: color, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{session.focus}</div>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                            {session.exercises.map((ex, i) => {
-                              const done = !!checked[dayName + "-" + si + "-" + i];
-                              return (
-                                <button key={i} onClick={() => toggleCheck(dayName + "-" + si, i)}
-                                  style={{ background: done ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.04)", border: "1px solid " + (done ? "rgba(16,185,129,0.4)" : "rgba(255,255,255,0.08)"), borderRadius: 20, fontSize: 12, padding: "5px 12px", color: done ? "#10b981" : "#94a3b8", cursor: "pointer", fontFamily: "inherit", textDecoration: done ? "line-through" : "none", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 5 }}>
-                                  {done ? "✓" : "○"} {ex}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      ) : (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "#334155" }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "#475569" }}>No plan assigned yet</div>
-          <div style={{ fontSize: 14, marginTop: 6 }}>Your trainer will assign your training plan soon.</div>
         </div>
-      )
-    )}
 
-    {activeTab === "progress" && <ProgressTracker clientId={client.id} />}
-  </div>
-</div>
-```
-
-);
-}
-
-// ─── SETTINGS VIEW ────────────────────────────────────────────────────────────
-function SettingsView({ creds, onSave, onBack }) {
-const [form, setForm] = useState({ name: creds.name, email: creds.email, currentPassword: “”, newPassword: “”, confirmPassword: “” });
-const [status, setStatus] = useState(null); // “success” | “error” | null
-const [msg, setMsg] = useState(””);
-
-const handleSave = () => {
-setStatus(null);
-// Validate current password
-if (form.currentPassword !== creds.password) {
-setStatus(“error”); setMsg(“Current password is incorrect.”); return;
-}
-if (form.newPassword && form.newPassword !== form.confirmPassword) {
-setStatus(“error”); setMsg(“New passwords don't match.”); return;
-}
-if (form.newPassword && form.newPassword.length < 6) {
-setStatus(“error”); setMsg(“New password must be at least 6 characters.”); return;
-}
-const updated = {
-name: form.name || creds.name,
-email: form.email || creds.email,
-password: form.newPassword || creds.password
-};
-onSave(updated);
-setStatus(“success”);
-setMsg(form.newPassword ? “Password updated successfully! ✓” : “Profile updated successfully! ✓”);
-setForm(f => ({ …f, currentPassword: “”, newPassword: “”, confirmPassword: “” }));
-};
-
-return (
-<div>
-<div style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, color: “white” }}>⚙️ Settings</div>
-<div style={{ fontSize: 13, color: “#475569”, marginBottom: 24 }}>Update your trainer profile and password</div>
-
-```
-  {/* Profile section */}
-  <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 16, padding: 18, marginBottom: 16 }}>
-    <div style={{ fontSize: 12, color: "#6366f1", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700, marginBottom: 16 }}>Trainer Profile</div>
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Display Name</label>
-      <input style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Coach Anubhav" />
-    </div>
-    <div>
-      <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Login Email</label>
-      <input type="email" style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-    </div>
-  </div>
-
-  {/* Password section */}
-  <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 16, padding: 18, marginBottom: 16 }}>
-    <div style={{ fontSize: 12, color: "#6366f1", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700, marginBottom: 16 }}>Change Password</div>
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Current Password</label>
-      <input type="password" style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.currentPassword} onChange={e => setForm({ ...form, currentPassword: e.target.value })} placeholder="Enter current password" />
-    </div>
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>New Password</label>
-      <input type="password" style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.newPassword} onChange={e => setForm({ ...form, newPassword: e.target.value })} placeholder="Leave blank to keep current" />
-    </div>
-    <div>
-      <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Confirm New Password</label>
-      <input type="password" style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Repeat new password" />
-    </div>
-  </div>
-
-  {/* Status message */}
-  {status && (
-    <div style={{ background: status === "success" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", border: "1px solid " + (status === "success" ? "rgba(16,185,129,0.4)" : "rgba(239,68,68,0.4)"), color: status === "success" ? "#10b981" : "#f87171", borderRadius: 12, padding: "12px 16px", fontSize: 14, marginBottom: 16, fontWeight: 600 }}>
-      {msg}
-    </div>
-  )}
-
-  {/* Save button */}
-  <div style={{ position: "sticky", bottom: 16 }}>
-    <button onClick={handleSave}
-      style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "white", borderRadius: 16, padding: "16px", fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 20px rgba(99,102,241,0.4)" }}>
-      Save Changes
-    </button>
-  </div>
-</div>
-```
-
-);
-}
-
-// ─── TRAINER DASHBOARD ────────────────────────────────────────────────────────
-function TrainerDashboard({ onLogout }) {
-const [clients, setClients] = useState([]);
-const [loading, setLoading] = useState(true);
-const [saving, setSaving] = useState(false);
-const [view, setView] = useState(“clients”);
-const [trainerCreds, setTrainerCreds] = useState(DEFAULT_TRAINER);
-const [selected, setSelected] = useState(null);
-const [search, setSearch] = useState(””);
-const [showDeleteId, setShowDeleteId] = useState(null);
-
-// Load clients and trainer on mount, then live-sync
-useEffect(() => {
-db_getTrainer().then(t => setTrainerCreds(t)).catch(() => {});
-if (USE_FIREBASE) {
-let unsub = null;
-fbSubscribeClients(clients => { setClients(clients); setLoading(false); }).then(u => { unsub = u; }).catch(() => setLoading(false));
-return () => { if (unsub) unsub(); };
-} else {
-// localStorage mode: just load once
-setClients(lsGetClients());
-setLoading(false);
-}
-}, []);
-
-const persist = async (updatedClient) => {
-setSaving(true);
-try { await db_saveClient(updatedClient); } catch(e) { console.error(e); }
-if (!USE_FIREBASE) setClients(lsGetClients()); // refresh from ls
-setSaving(false);
-};
-const filtered = clients.filter(c =>
-(c.name || “”).toLowerCase().includes(search.toLowerCase()) ||
-(c.email || “”).toLowerCase().includes(search.toLowerCase())
-);
-
-const btn = (extra = {}) => ({
-border: “none”, borderRadius: 14, fontWeight: 700, fontSize: 15,
-cursor: “pointer”, fontFamily: “inherit”, padding: “14px 20px”,
-width: “100%”, textAlign: “left”, …extra
-});
-
-return (
-<div style={{ minHeight: “100vh”, background: “#060a10”, fontFamily: “'DM Sans', sans-serif”, color: “white” }}>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
-
-```
-  {/* Sticky header */}
-  <div style={{ background: "rgba(15,23,42,0.97)", borderBottom: "1px solid rgba(99,102,241,0.15)", padding: "0 20px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 10 }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      {view !== "clients" && (
-        <button onClick={() => { setView("clients"); setSelected(null); }} style={{ background: "none", border: "none", color: "#818cf8", fontSize: 20, cursor: "pointer", padding: "0 8px 0 0" }}>←</button>
-      )}
-      <div style={{ width: 28, height: 28, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>⚡</div>
-      <span style={{ fontFamily: "\'Bebas Neue\'", fontSize: 19, letterSpacing: 3, background: "linear-gradient(135deg,#818cf8,#c084fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>FitByAnubhav</span>
-    </div>
-    <div style={{ display: "flex", gap: 8 }}>
-      <button onClick={() => setView("settings")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer" }}>⚙️</button>
-      <button onClick={onLogout} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer" }}>Logout</button>
-    </div>
-  </div>
-
-  <div style={{ maxWidth: 600, margin: "0 auto", padding: "20px 16px 40px" }}>
-
-    {/* ── CLIENTS LIST ── */}
-    {view === "clients" && (
-      <>
-        {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-          {[
-            { label: "Total Clients", value: clients.length, icon: "👤" },
-            { label: "With Plans", value: clients.filter(c => c.plan?.name).length, icon: "📋" },
-            { label: "Intermediate+", value: clients.filter(c => c.level === "Intermediate" || c.level === "Advanced").length, icon: "🔥" },
-            { label: "Beginners", value: clients.filter(c => c.level === "Beginner").length, icon: "🌱" },
-          ].map(s => (
-            <div key={s.label} style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 14, padding: "16px", display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 24 }}>{s.icon}</div>
-              <div>
-                <div style={{ fontSize: 24, fontWeight: 800, fontFamily: "\'Bebas Neue\'", background: "linear-gradient(135deg,#818cf8,#c084fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{s.value}</div>
-                <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: 1 }}>{s.label}</div>
-              </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 20 }}>
+          {[["Goal", client.goal], ["Level", client.level], ["Weight", client.weight + (client.height ? " · " + client.height : "")], ["Diet", client.diet || "—"]].map(([l, v]) => (
+            <div key={l} style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: 1 }}>{l}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", marginTop: 4 }}>{v}</div>
             </div>
           ))}
         </div>
 
-        {/* Add client button */}
-        <button onClick={() => setView("register")} style={{ ...btn({ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white", marginBottom: 16, borderRadius: 16, textAlign: "center", fontSize: 16, padding: "16px" }) }}>
-          ＋ Add New Client
-        </button>
-
-        {/* Search */}
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍  Search clients..." style={{ ...inp(), marginBottom: 14, fontSize: 15 }} />
-
-        {/* Client cards */}
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#475569" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🏋️</div>
-            <div style={{ fontSize: 17 }}>No clients yet</div>
-          </div>
-        ) : loading ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#475569" }}>
-            <div style={{ fontSize: 40, marginBottom: 10 }}>⏳</div>
-            <div>Loading clients...</div>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {filtered.map(client => (
-              <div key={client.id} onClick={() => { setSelected(client); setView("detail"); }}
-                style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px 18px", cursor: "pointer" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "white", flexShrink: 0 }}>{client.name.charAt(0)}</div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 16, color: "white" }}>{client.name}</div>
-                      <div style={{ fontSize: 12, color: "#475569", marginTop: 2 }}>{client.email}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 12, color: "#6366f1", background: "rgba(99,102,241,0.1)", borderRadius: 20, padding: "3px 10px", fontWeight: 600 }}>{client.level}</span>
-                    <button onClick={e => { e.stopPropagation(); setShowDeleteId(client.id); }}
-                      style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", borderRadius: 8, width: 34, height: 34, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                  <Badge text={client.goal} />
-                  {client.plan?.name && <Badge text={client.plan.name} />}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
-                  {[["Weight", client.weight || "—"], ["Plan", client.plan?.name || "No plan"]].map(([l, v]) => (
-                    <div key={l} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px" }}>
-                      <div style={{ fontSize: 10, color: "#334155", textTransform: "uppercase", letterSpacing: 1 }}>{l}</div>
-                      <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+        {client.medicalHistory && (
+          <div style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 14, padding: "12px 16px", marginBottom: 16, display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>🩺</span>
+            <div>
+              <div style={{ fontSize: 11, color: "#f87171", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700, marginBottom: 3 }}>My Health Profile</div>
+              <div style={{ fontSize: 13, color: "#94a3b8" }}>{client.medicalHistory}</div>
+            </div>
           </div>
         )}
-      </>
-    )}
 
-    {/* ── CLIENT DETAIL ── */}
-    {view === "detail" && selected && (
-      <ClientDetailView
-        client={selected}
-        onBack={() => { setView("clients"); setSelected(null); }}
-        onSave={updated => {
-          persist(updated);
-          setSelected(updated);
-        }}
-      />
-    )}
+        {todaySessions.length > 0 && (
+          <div style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.08))", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 16, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "#6366f1", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>Today — {today}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginTop: 4 }}>{todaySessions.map(s => s.focus).join(" + ")}</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: todayDone === todayTotal ? "#10b981" : "#818cf8" }}>{todayDone}/{todayTotal}</div>
+                <div style={{ fontSize: 10, color: "#475569" }}>done today</div>
+              </div>
+              {todayDone === todayTotal && todayTotal > 0 && <div style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.4)", color: "#10b981", borderRadius: 20, fontSize: 12, padding: "4px 14px", fontWeight: 700 }}>🎉 Complete!</div>}
+            </div>
+          </div>
+        )}
 
-    {/* ── REGISTER ── */}
-    {view === "register" && (
-      <RegisterView
-        onBack={() => setView("clients")}
-        onRegister={async newClient => {
-          const id = String(Date.now());
-          await db_saveClient({ ...newClient, id }).catch(e => console.error(e));
-          if (!USE_FIREBASE) setClients(lsGetClients());
-          setView("clients");
-        }}
-      />
-    )}
-
-    {/* ── SETTINGS ── */}
-    {view === "settings" && (
-      <SettingsView
-        creds={trainerCreds}
-        onSave={updated => { db_saveTrainer(updated).catch(e=>console.error(e)); setTrainerCreds(updated); }}
-        onBack={() => setView("clients")}
-      />
-    )}
-  </div>
-
-  {/* Delete modal */}
-  {showDeleteId && (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ background: "#0f172a", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 20, padding: 28, width: "100%", maxWidth: 340, textAlign: "center" }}>
-        <div style={{ fontSize: 44, marginBottom: 14 }}>🗑️</div>
-        <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "white" }}>Remove this client?</div>
-        <div style={{ color: "#64748b", fontSize: 14, marginBottom: 24, lineHeight: 1.5 }}>This will permanently delete the client and their training plan.</div>
-        <div style={{ display: "flex", gap: 12 }}>
-          <button onClick={() => setShowDeleteId(null)} style={{ flex: 1, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", borderRadius: 12, padding: "13px", fontWeight: 600, cursor: "pointer", fontSize: 14 }}>Cancel</button>
-          <button onClick={() => { db_deleteClient(showDeleteId).then(() => { if (!USE_FIREBASE) setClients(lsGetClients()); setShowDeleteId(null); }).catch(() => setShowDeleteId(null)); }}
-            style={{ flex: 1, background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 12, padding: "13px", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>Delete</button>
+        <div style={{ display: "flex", gap: 4, marginBottom: 22, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          {[["plan","📋 My Plan"],["progress","📈 Progress"]].map(([t, label]) => (
+            <button key={t} onClick={() => setActiveTab(t)} style={{ padding: "10px 18px", background: "none", border: "none", color: activeTab === t ? "#818cf8" : "#475569", fontWeight: activeTab === t ? 700 : 400, fontSize: 13, cursor: "pointer", borderBottom: activeTab === t ? "2px solid #6366f1" : "2px solid transparent", fontFamily: "inherit" }}>{label}</button>
+          ))}
         </div>
+
+        {activeTab === "plan" && (
+          plan?.name ? (
+            <>
+              <div style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.06))", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 14, padding: "14px 18px", marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "#6366f1", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>Current Plan</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>{plan.name}</div>
+                  {plan.notes && <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>📝 {plan.notes}</div>}
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#818cf8" }}>{plan.weeks}</div>
+                  <div style={{ fontSize: 11, color: "#475569" }}>WEEKS</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600, marginBottom: 12 }}>Tap exercises to mark them done ✓</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {DAYS_OF_WEEK.map(dayName => {
+                  const sessions = plan.days?.filter(d => d.day === dayName) || [];
+                  const isToday = dayName === today;
+                  const color = DAY_COLORS[dayName];
+                  const totalDone = sessions.reduce((acc, s, si) => acc + s.exercises.filter((_, i) => checked[dayName + "-" + si + "-" + i]).length, 0);
+                  const totalEx = sessions.reduce((acc, s) => acc + s.exercises.length, 0);
+                  return (
+                    <div key={dayName} style={{ background: isToday ? "rgba(" + hexToRgb(color) + ",0.07)" : "rgba(15,23,42,0.7)", border: "1px solid " + (isToday ? color + "44" : "rgba(255,255,255,0.06)"), borderRadius: 14, overflow: "hidden" }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", padding: "12px 16px", gap: 12 }}>
+                        <div style={{ width: 5, background: sessions.length ? color : "rgba(255,255,255,0.07)", borderRadius: 3, flexShrink: 0, alignSelf: "stretch", minHeight: 36 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: sessions.length ? 10 : 0 }}>
+                            <span style={{ fontWeight: 700, fontSize: 14, color: sessions.length ? "white" : "#334155" }}>{dayName}</span>
+                            {isToday && <span style={{ background: color + "22", color: color, border: "1px solid " + color + "44", borderRadius: 20, fontSize: 10, padding: "2px 8px", fontWeight: 700 }}>TODAY</span>}
+                            {!sessions.length && <span style={{ fontSize: 12, color: "#334155" }}>💤 Rest & recover today</span>}
+                            {sessions.length > 0 && totalDone > 0 && <span style={{ fontSize: 11, color: totalDone === totalEx ? "#10b981" : "#f59e0b", fontWeight: 600 }}>{totalDone}/{totalEx} ✓</span>}
+                          </div>
+                          {sessions.map((session, si) => (
+                            <div key={si} style={{ marginBottom: si < sessions.length - 1 ? 14 : 0 }}>
+                              <div style={{ fontSize: 11, color: color, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{session.focus}</div>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                {session.exercises.map((ex, i) => {
+                                  const done = !!checked[dayName + "-" + si + "-" + i];
+                                  return (
+                                    <button key={i} onClick={() => toggleCheck(dayName + "-" + si, i)}
+                                      style={{ background: done ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.04)", border: "1px solid " + (done ? "rgba(16,185,129,0.4)" : "rgba(255,255,255,0.08)"), borderRadius: 20, fontSize: 12, padding: "5px 12px", color: done ? "#10b981" : "#94a3b8", cursor: "pointer", fontFamily: "inherit", textDecoration: done ? "line-through" : "none", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 5 }}>
+                                      {done ? "✓" : "○"} {ex}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div style={{ textAlign: "center", padding: "60px 20px", color: "#334155" }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
+              <div style={{ fontSize: 18, fontWeight: 600, color: "#475569" }}>No plan assigned yet</div>
+              <div style={{ fontSize: 14, marginTop: 6 }}>Your trainer will assign your training plan soon.</div>
+            </div>
+          )
+        )}
+
+        {activeTab === "progress" && <ProgressTracker clientId={client.id} />}
       </div>
     </div>
-  )}
-</div>
-```
+  );
+}
 
-);
+// ─── SETTINGS VIEW ────────────────────────────────────────────────────────────
+function SettingsView({ creds, onSave, onBack }) {
+  const [form, setForm] = useState({ name: creds.name, email: creds.email, currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [status, setStatus] = useState(null); // "success" | "error" | null
+  const [msg, setMsg] = useState("");
+
+  const handleSave = () => {
+    setStatus(null);
+    // Validate current password
+    if (form.currentPassword !== creds.password) {
+      setStatus("error"); setMsg("Current password is incorrect."); return;
+    }
+    if (form.newPassword && form.newPassword !== form.confirmPassword) {
+      setStatus("error"); setMsg("New passwords don\'t match."); return;
+    }
+    if (form.newPassword && form.newPassword.length < 6) {
+      setStatus("error"); setMsg("New password must be at least 6 characters."); return;
+    }
+    const updated = {
+      name: form.name || creds.name,
+      email: form.email || creds.email,
+      password: form.newPassword || creds.password
+    };
+    onSave(updated);
+    setStatus("success");
+    setMsg(form.newPassword ? "Password updated successfully! ✓" : "Profile updated successfully! ✓");
+    setForm(f => ({ ...f, currentPassword: "", newPassword: "", confirmPassword: "" }));
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, color: "white" }}>⚙️ Settings</div>
+      <div style={{ fontSize: 13, color: "#475569", marginBottom: 24 }}>Update your trainer profile and password</div>
+
+      {/* Profile section */}
+      <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 16, padding: 18, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: "#6366f1", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700, marginBottom: 16 }}>Trainer Profile</div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Display Name</label>
+          <input style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Coach Anubhav" />
+        </div>
+        <div>
+          <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Login Email</label>
+          <input type="email" style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+        </div>
+      </div>
+
+      {/* Password section */}
+      <div style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 16, padding: 18, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: "#6366f1", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700, marginBottom: 16 }}>Change Password</div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Current Password</label>
+          <input type="password" style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.currentPassword} onChange={e => setForm({ ...form, currentPassword: e.target.value })} placeholder="Enter current password" />
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>New Password</label>
+          <input type="password" style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.newPassword} onChange={e => setForm({ ...form, newPassword: e.target.value })} placeholder="Leave blank to keep current" />
+        </div>
+        <div>
+          <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Confirm New Password</label>
+          <input type="password" style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Repeat new password" />
+        </div>
+      </div>
+
+      {/* Status message */}
+      {status && (
+        <div style={{ background: status === "success" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", border: "1px solid " + (status === "success" ? "rgba(16,185,129,0.4)" : "rgba(239,68,68,0.4)"), color: status === "success" ? "#10b981" : "#f87171", borderRadius: 12, padding: "12px 16px", fontSize: 14, marginBottom: 16, fontWeight: 600 }}>
+          {msg}
+        </div>
+      )}
+
+      {/* Save button */}
+      <div style={{ position: "sticky", bottom: 16 }}>
+        <button onClick={handleSave}
+          style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "white", borderRadius: 16, padding: "16px", fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 20px rgba(99,102,241,0.4)" }}>
+          Save Changes
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── TRAINER DASHBOARD ────────────────────────────────────────────────────────
+function TrainerDashboard({ onLogout }) {
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [view, setView] = useState("clients");
+  const [trainerCreds, setTrainerCreds] = useState(DEFAULT_TRAINER);
+  const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState("");
+  const [showDeleteId, setShowDeleteId] = useState(null);
+
+  // Load clients and trainer on mount, then live-sync
+  useEffect(() => {
+    db_getTrainer().then(t => setTrainerCreds(t)).catch(() => {});
+    if (USE_FIREBASE) {
+      let unsub = null;
+      fbSubscribeClients(clients => { setClients(clients); setLoading(false); }).then(u => { unsub = u; }).catch(() => setLoading(false));
+      return () => { if (unsub) unsub(); };
+    } else {
+      // localStorage mode: just load once
+      setClients(lsGetClients());
+      setLoading(false);
+    }
+  }, []);
+
+  const persist = async (updatedClient) => {
+    setSaving(true);
+    try { await db_saveClient(updatedClient); } catch(e) { console.error(e); }
+    if (!USE_FIREBASE) setClients(lsGetClients()); // refresh from ls
+    setSaving(false);
+  };
+  const filtered = clients.filter(c =>
+    (c.name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (c.email || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  const btn = (extra = {}) => ({
+    border: "none", borderRadius: 14, fontWeight: 700, fontSize: 15,
+    cursor: "pointer", fontFamily: "inherit", padding: "14px 20px",
+    width: "100%", textAlign: "left", ...extra
+  });
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#060a10", fontFamily: "\'DM Sans\', sans-serif", color: "white" }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+
+      {/* Sticky header */}
+      <div style={{ background: "rgba(15,23,42,0.97)", borderBottom: "1px solid rgba(99,102,241,0.15)", padding: "0 20px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {view !== "clients" && (
+            <button onClick={() => { setView("clients"); setSelected(null); }} style={{ background: "none", border: "none", color: "#818cf8", fontSize: 20, cursor: "pointer", padding: "0 8px 0 0" }}>←</button>
+          )}
+          <div style={{ width: 28, height: 28, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>⚡</div>
+          <span style={{ fontFamily: "\'Bebas Neue\'", fontSize: 19, letterSpacing: 3, background: "linear-gradient(135deg,#818cf8,#c084fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>FitByAnubhav</span>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setView("settings")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer" }}>⚙️</button>
+          <button onClick={onLogout} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer" }}>Logout</button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: "20px 16px 40px" }}>
+
+        {/* ── CLIENTS LIST ── */}
+        {view === "clients" && (
+          <>
+            {/* Stats */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+              {[
+                { label: "Total Clients", value: clients.length, icon: "👤" },
+                { label: "With Plans", value: clients.filter(c => c.plan?.name).length, icon: "📋" },
+                { label: "Intermediate+", value: clients.filter(c => c.level === "Intermediate" || c.level === "Advanced").length, icon: "🔥" },
+                { label: "Beginners", value: clients.filter(c => c.level === "Beginner").length, icon: "🌱" },
+              ].map(s => (
+                <div key={s.label} style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 14, padding: "16px", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ fontSize: 24 }}>{s.icon}</div>
+                  <div>
+                    <div style={{ fontSize: 24, fontWeight: 800, fontFamily: "\'Bebas Neue\'", background: "linear-gradient(135deg,#818cf8,#c084fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{s.value}</div>
+                    <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: 1 }}>{s.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add client button */}
+            <button onClick={() => setView("register")} style={{ ...btn({ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white", marginBottom: 16, borderRadius: 16, textAlign: "center", fontSize: 16, padding: "16px" }) }}>
+              ＋ Add New Client
+            </button>
+
+            {/* Search */}
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍  Search clients..." style={{ ...inp(), marginBottom: 14, fontSize: 15 }} />
+
+            {/* Client cards */}
+            {filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: "#475569" }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>🏋️</div>
+                <div style={{ fontSize: 17 }}>No clients yet</div>
+              </div>
+            ) : loading ? (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: "#475569" }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>⏳</div>
+                <div>Loading clients...</div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {filtered.map(client => (
+                  <div key={client.id} onClick={() => { setSelected(client); setView("detail"); }}
+                    style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px 18px", cursor: "pointer" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                        <div style={{ width: 48, height: 48, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "white", flexShrink: 0 }}>{client.name.charAt(0)}</div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 16, color: "white" }}>{client.name}</div>
+                          <div style={{ fontSize: 12, color: "#475569", marginTop: 2 }}>{client.email}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 12, color: "#6366f1", background: "rgba(99,102,241,0.1)", borderRadius: 20, padding: "3px 10px", fontWeight: 600 }}>{client.level}</span>
+                        <button onClick={e => { e.stopPropagation(); setShowDeleteId(client.id); }}
+                          style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", borderRadius: 8, width: 34, height: 34, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                      <Badge text={client.goal} />
+                      {client.plan?.name && <Badge text={client.plan.name} />}
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+                      {[["Weight", client.weight || "—"], ["Plan", client.plan?.name || "No plan"]].map(([l, v]) => (
+                        <div key={l} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px" }}>
+                          <div style={{ fontSize: 10, color: "#334155", textTransform: "uppercase", letterSpacing: 1 }}>{l}</div>
+                          <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── CLIENT DETAIL ── */}
+        {view === "detail" && selected && (
+          <ClientDetailView
+            client={selected}
+            onBack={() => { setView("clients"); setSelected(null); }}
+            onSave={updated => {
+              persist(updated);
+              setSelected(updated);
+            }}
+          />
+        )}
+
+        {/* ── REGISTER ── */}
+        {view === "register" && (
+          <RegisterView
+            onBack={() => setView("clients")}
+            onRegister={async newClient => {
+              const id = String(Date.now());
+              await db_saveClient({ ...newClient, id }).catch(e => console.error(e));
+              if (!USE_FIREBASE) setClients(lsGetClients());
+              setView("clients");
+            }}
+          />
+        )}
+
+        {/* ── SETTINGS ── */}
+        {view === "settings" && (
+          <SettingsView
+            creds={trainerCreds}
+            onSave={updated => { db_saveTrainer(updated).catch(e=>console.error(e)); setTrainerCreds(updated); }}
+            onBack={() => setView("clients")}
+          />
+        )}
+      </div>
+
+      {/* Delete modal */}
+      {showDeleteId && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#0f172a", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 20, padding: 28, width: "100%", maxWidth: 340, textAlign: "center" }}>
+            <div style={{ fontSize: 44, marginBottom: 14 }}>🗑️</div>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "white" }}>Remove this client?</div>
+            <div style={{ color: "#64748b", fontSize: 14, marginBottom: 24, lineHeight: 1.5 }}>This will permanently delete the client and their training plan.</div>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button onClick={() => setShowDeleteId(null)} style={{ flex: 1, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", borderRadius: 12, padding: "13px", fontWeight: 600, cursor: "pointer", fontSize: 14 }}>Cancel</button>
+              <button onClick={() => { db_deleteClient(showDeleteId).then(() => { if (!USE_FIREBASE) setClients(lsGetClients()); setShowDeleteId(null); }).catch(() => setShowDeleteId(null)); }}
+                style={{ flex: 1, background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 12, padding: "13px", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── CLIENT DETAIL ────────────────────────────────────────────────────────────
 function ClientDetailView({ client, onBack, onSave }) {
-const [tab, setTab] = useState(“profile”);
-const [data, setData] = useState({ …client });
-const [plan, setPlan] = useState(client.plan || { name: “”, weeks: “”, days: [], notes: “” });
-const [saved, setSaved] = useState(false);
+  const [tab, setTab] = useState("profile");
+  const [data, setData] = useState({ ...client });
+  const [plan, setPlan] = useState(client.plan || { name: "", weeks: "", days: [], notes: "" });
+  const [saved, setSaved] = useState(false);
 
-const handleSave = () => { onSave({ …data, plan }); setSaved(true); setTimeout(() => setSaved(false), 2500); };
+  const handleSave = () => { onSave({ ...data, plan }); setSaved(true); setTimeout(() => setSaved(false), 2500); };
 
-const field = (label, key, type = “text”) => (
-<div key={key} style={{ marginBottom: 16 }}>
-<label style={{ fontSize: 11, color: “#475569”, textTransform: “uppercase”, letterSpacing: 1, display: “block”, marginBottom: 7 }}>{label}</label>
-<input type={type} style={{ …inp(), fontSize: 15, padding: “13px 14px” }} value={data[key] || “”} onChange={e => setData({ …data, [key]: e.target.value })} />
-</div>
-);
+  const field = (label, key, type = "text") => (
+    <div key={key} style={{ marginBottom: 16 }}>
+      <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>{label}</label>
+      <input type={type} style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={data[key] || ""} onChange={e => setData({ ...data, [key]: e.target.value })} />
+    </div>
+  );
 
-return (
-<div>
-{/* Client header */}
-<div style={{ display: “flex”, alignItems: “center”, gap: 14, marginBottom: 22, background: “rgba(15,23,42,0.8)”, border: “1px solid rgba(99,102,241,0.15)”, borderRadius: 16, padding: “14px 16px” }}>
-<div style={{ width: 50, height: 50, borderRadius: “50%”, background: “linear-gradient(135deg,#6366f1,#8b5cf6)”, display: “flex”, alignItems: “center”, justifyContent: “center”, fontSize: 22, fontWeight: 700, color: “white”, flexShrink: 0 }}>{client.name.charAt(0)}</div>
-<div>
-<div style={{ fontWeight: 700, fontSize: 18, color: “white” }}>{client.name}</div>
-<div style={{ fontSize: 13, color: “#475569”, marginTop: 2 }}>{client.email}</div>
-</div>
-</div>
-
-```
-  {/* Tabs */}
-  <div style={{ display: "flex", background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4, marginBottom: 22, border: "1px solid rgba(255,255,255,0.08)" }}>
-    {[["profile", "👤 Profile"], ["plan", "📋 Training Plan"]].map(([t, label]) => (
-      <button key={t} onClick={() => setTab(t)}
-        style={{ flex: 1, padding: "11px", border: "none", borderRadius: 9, cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "inherit", transition: "all 0.2s",
-          background: tab === t ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
-          color: tab === t ? "white" : "#64748b",
-          boxShadow: tab === t ? "0 4px 15px rgba(99,102,241,0.3)" : "none" }}>
-        {label}
-      </button>
-    ))}
-  </div>
-
-  {tab === "profile" && (
+  return (
     <div>
-      {field("Full Name", "name")}
-      {field("Email (login)", "email", "email")}
-      {field("Password", "password")}
+      {/* Client header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 22, background: "rgba(15,23,42,0.8)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 16, padding: "14px 16px" }}>
+        <div style={{ width: 50, height: 50, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, color: "white", flexShrink: 0 }}>{client.name.charAt(0)}</div>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 18, color: "white" }}>{client.name}</div>
+          <div style={{ fontSize: 13, color: "#475569", marginTop: 2 }}>{client.email}</div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 4, marginBottom: 22, border: "1px solid rgba(255,255,255,0.08)" }}>
+        {[["profile", "👤 Profile"], ["plan", "📋 Training Plan"]].map(([t, label]) => (
+          <button key={t} onClick={() => setTab(t)}
+            style={{ flex: 1, padding: "11px", border: "none", borderRadius: 9, cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "inherit", transition: "all 0.2s",
+              background: tab === t ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
+              color: tab === t ? "white" : "#64748b",
+              boxShadow: tab === t ? "0 4px 15px rgba(99,102,241,0.3)" : "none" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "profile" && (
+        <div>
+          {field("Full Name", "name")}
+          {field("Email (login)", "email", "email")}
+          {field("Password", "password")}
+          {field("Phone", "phone", "tel")}
+          {field("Age", "age", "number")}
+          {field("Weight (kg)", "weight")}
+          {field("Height", "height")}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Goal</label>
+            <select style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={data.goal || ""} onChange={e => setData({ ...data, goal: e.target.value })}>
+              {GOALS.map(g => <option key={g}>{g}</option>)}
+            </select>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Level</label>
+            <select style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={data.level || ""} onChange={e => setData({ ...data, level: e.target.value })}>
+              {LEVELS.map(l => <option key={l}>{l}</option>)}
+            </select>
+          </div>
+          {field("Diet", "diet")}
+          {field("Medical History", "medicalHistory")}
+          {field("Goals / Events", "goals")}
+          {field("Lifestyle Notes", "lifestyle")}
+          {field("Join Date", "joinDate", "date")}
+        </div>
+      )}
+
+      {tab === "plan" && <PlanEditor plan={plan} onChange={setPlan} />}
+
+      {/* Save button - sticky at bottom */}
+      <div style={{ position: "sticky", bottom: 16, marginTop: 24 }}>
+        <button onClick={handleSave}
+          style={{ width: "100%", background: saved ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "white", borderRadius: 16, padding: "16px", fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 20px rgba(99,102,241,0.4)", transition: "all 0.3s" }}>
+          {saved ? "✓ Saved!" : "Save Changes"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── REGISTER VIEW ────────────────────────────────────────────────────────────
+function RegisterView({ onBack, onRegister }) {
+  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", age: "", weight: "", height: "", goal: "General Fitness", level: "Beginner", joinDate: new Date().toISOString().split("T")[0], diet: "", medicalHistory: "", plan: { name: "", weeks: "", days: [], notes: "" } });
+  const [errors, setErrors] = useState({});
+  const validate = () => { const e = {}; if (!form.name) e.name = true; if (!form.email) e.email = true; if (!form.password) e.password = true; setErrors(e); return Object.keys(e).length === 0; };
+
+  const field = (label, key, type = "text", required = false) => (
+    <div key={key} style={{ marginBottom: 16 }}>
+      <label style={{ fontSize: 11, color: errors[key] ? "#f87171" : "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>
+        {label}{required ? " *" : ""}
+      </label>
+      <input type={type} style={{ ...inp({ borderColor: errors[key] ? "rgba(239,68,68,0.5)" : undefined }), fontSize: 15, padding: "13px 14px" }}
+        value={form[key] || ""} onChange={e => setForm({ ...form, [key]: e.target.value })} />
+    </div>
+  );
+
+  return (
+    <div>
+      <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, color: "white" }}>Add New Client</div>
+      <div style={{ fontSize: 13, color: "#475569", marginBottom: 22 }}>Only Name, Email and Password are required</div>
+
+      {field("Full Name", "name", "text", true)}
+      {field("Email (their login)", "email", "email", true)}
+      {field("Password", "password", "text", true)}
       {field("Phone", "phone", "tel")}
       {field("Age", "age", "number")}
       {field("Weight (kg)", "weight")}
       {field("Height", "height")}
+
       <div style={{ marginBottom: 16 }}>
         <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Goal</label>
-        <select style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={data.goal || ""} onChange={e => setData({ ...data, goal: e.target.value })}>
+        <select style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.goal} onChange={e => setForm({ ...form, goal: e.target.value })}>
           {GOALS.map(g => <option key={g}>{g}</option>)}
         </select>
       </div>
       <div style={{ marginBottom: 16 }}>
         <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Level</label>
-        <select style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={data.level || ""} onChange={e => setData({ ...data, level: e.target.value })}>
+        <select style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.level} onChange={e => setForm({ ...form, level: e.target.value })}>
           {LEVELS.map(l => <option key={l}>{l}</option>)}
         </select>
       </div>
       {field("Diet", "diet")}
-      {field("Medical History", "medicalHistory")}
-      {field("Goals / Events", "goals")}
-      {field("Lifestyle Notes", "lifestyle")}
+      {field("Medical History / Notes", "medicalHistory")}
       {field("Join Date", "joinDate", "date")}
+
+      <div style={{ position: "sticky", bottom: 16, marginTop: 24 }}>
+        <button onClick={() => { if (validate()) onRegister(form); }}
+          style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "white", borderRadius: 16, padding: "16px", fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 20px rgba(99,102,241,0.4)" }}>
+          Register Client →
+        </button>
+      </div>
     </div>
-  )}
-
-  {tab === "plan" && <PlanEditor plan={plan} onChange={setPlan} />}
-
-  {/* Save button - sticky at bottom */}
-  <div style={{ position: "sticky", bottom: 16, marginTop: 24 }}>
-    <button onClick={handleSave}
-      style={{ width: "100%", background: saved ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "white", borderRadius: 16, padding: "16px", fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 20px rgba(99,102,241,0.4)", transition: "all 0.3s" }}>
-      {saved ? "✓ Saved!" : "Save Changes"}
-    </button>
-  </div>
-</div>
-```
-
-);
-}
-
-// ─── REGISTER VIEW ────────────────────────────────────────────────────────────
-function RegisterView({ onBack, onRegister }) {
-const [form, setForm] = useState({ name: “”, email: “”, password: “”, phone: “”, age: “”, weight: “”, height: “”, goal: “General Fitness”, level: “Beginner”, joinDate: new Date().toISOString().split(“T”)[0], diet: “”, medicalHistory: “”, plan: { name: “”, weeks: “”, days: [], notes: “” } });
-const [errors, setErrors] = useState({});
-const validate = () => { const e = {}; if (!form.name) e.name = true; if (!form.email) e.email = true; if (!form.password) e.password = true; setErrors(e); return Object.keys(e).length === 0; };
-
-const field = (label, key, type = “text”, required = false) => (
-<div key={key} style={{ marginBottom: 16 }}>
-<label style={{ fontSize: 11, color: errors[key] ? “#f87171” : “#475569”, textTransform: “uppercase”, letterSpacing: 1, display: “block”, marginBottom: 7 }}>
-{label}{required ? “ *” : “”}
-</label>
-<input type={type} style={{ …inp({ borderColor: errors[key] ? “rgba(239,68,68,0.5)” : undefined }), fontSize: 15, padding: “13px 14px” }}
-value={form[key] || “”} onChange={e => setForm({ …form, [key]: e.target.value })} />
-</div>
-);
-
-return (
-<div>
-<div style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, color: “white” }}>Add New Client</div>
-<div style={{ fontSize: 13, color: “#475569”, marginBottom: 22 }}>Only Name, Email and Password are required</div>
-
-```
-  {field("Full Name", "name", "text", true)}
-  {field("Email (their login)", "email", "email", true)}
-  {field("Password", "password", "text", true)}
-  {field("Phone", "phone", "tel")}
-  {field("Age", "age", "number")}
-  {field("Weight (kg)", "weight")}
-  {field("Height", "height")}
-
-  <div style={{ marginBottom: 16 }}>
-    <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Goal</label>
-    <select style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.goal} onChange={e => setForm({ ...form, goal: e.target.value })}>
-      {GOALS.map(g => <option key={g}>{g}</option>)}
-    </select>
-  </div>
-  <div style={{ marginBottom: 16 }}>
-    <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Level</label>
-    <select style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={form.level} onChange={e => setForm({ ...form, level: e.target.value })}>
-      {LEVELS.map(l => <option key={l}>{l}</option>)}
-    </select>
-  </div>
-  {field("Diet", "diet")}
-  {field("Medical History / Notes", "medicalHistory")}
-  {field("Join Date", "joinDate", "date")}
-
-  <div style={{ position: "sticky", bottom: 16, marginTop: 24 }}>
-    <button onClick={() => { if (validate()) onRegister(form); }}
-      style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "white", borderRadius: 16, padding: "16px", fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 20px rgba(99,102,241,0.4)" }}>
-      Register Client →
-    </button>
-  </div>
-</div>
-```
-
-);
+  );
 }
 
 // ─── PLAN EDITOR ──────────────────────────────────────────────────────────────
 function PlanEditor({ plan, onChange }) {
-const [newEx, setNewEx] = useState({});
-const updateDay = (i, f, v) => { const d = […plan.days]; d[i] = { …d[i], [f]: v }; onChange({ …plan, days: d }); };
-const addEx = (i) => { if (!newEx[i]) return; const d = […plan.days]; d[i] = { …d[i], exercises: […(d[i].exercises || []), newEx[i]] }; onChange({ …plan, days: d }); setNewEx({ …newEx, [i]: “” }); };
-const removeEx = (i, j) => { const d = […plan.days]; d[i].exercises = d[i].exercises.filter((*, k) => k !== j); onChange({ …plan, days: d }); };
-const addDay = () => { onChange({ …plan, days: […(plan.days || []), { day: “Monday”, focus: “”, exercises: [] }] }); };
-const removeDay = (i) => onChange({ …plan, days: plan.days.filter((*, k) => k !== i) });
+  const [newEx, setNewEx] = useState({});
+  const updateDay = (i, f, v) => { const d = [...plan.days]; d[i] = { ...d[i], [f]: v }; onChange({ ...plan, days: d }); };
+  const addEx = (i) => { if (!newEx[i]) return; const d = [...plan.days]; d[i] = { ...d[i], exercises: [...(d[i].exercises || []), newEx[i]] }; onChange({ ...plan, days: d }); setNewEx({ ...newEx, [i]: "" }); };
+  const removeEx = (i, j) => { const d = [...plan.days]; d[i].exercises = d[i].exercises.filter((_, k) => k !== j); onChange({ ...plan, days: d }); };
+  const addDay = () => { onChange({ ...plan, days: [...(plan.days || []), { day: "Monday", focus: "", exercises: [] }] }); };
+  const removeDay = (i) => onChange({ ...plan, days: plan.days.filter((_, k) => k !== i) });
 
-return (
-<div>
-<div style={{ marginBottom: 16 }}>
-<label style={{ fontSize: 11, color: “#475569”, textTransform: “uppercase”, letterSpacing: 1, display: “block”, marginBottom: 7 }}>Plan Name</label>
-<input style={{ …inp(), fontSize: 15, padding: “13px 14px” }} value={plan.name || “”} onChange={e => onChange({ …plan, name: e.target.value })} placeholder=“e.g. Marathon Block A” />
-</div>
-<div style={{ display: “grid”, gridTemplateColumns: “1fr 1fr”, gap: 12, marginBottom: 16 }}>
-<div>
-<label style={{ fontSize: 11, color: “#475569”, textTransform: “uppercase”, letterSpacing: 1, display: “block”, marginBottom: 7 }}>Duration (weeks)</label>
-<input style={{ …inp(), fontSize: 15, padding: “13px 14px” }} type=“number” value={plan.weeks || “”} onChange={e => onChange({ …plan, weeks: e.target.value })} placeholder=“8” />
-</div>
-</div>
-<div style={{ marginBottom: 20 }}>
-<label style={{ fontSize: 11, color: “#475569”, textTransform: “uppercase”, letterSpacing: 1, display: “block”, marginBottom: 7 }}>Trainer Notes (shown to client)</label>
-<input style={{ …inp(), fontSize: 15, padding: “13px 14px” }} value={plan.notes || “”} onChange={e => onChange({ …plan, notes: e.target.value })} placeholder=“Motivation or coaching notes…” />
-</div>
-
-```
-  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-    {(plan.days || []).map((day, i) => (
-      <div key={i} style={{ background: "rgba(15,23,42,0.7)", border: "1px solid " + (DAY_COLORS[day.day] || "#334155") + "44", borderRadius: 16, padding: 16 }}>
-        {/* Day header */}
-        <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-          <select style={{ ...inp(), fontSize: 14, padding: "11px 12px", flex: "none", width: 130 }} value={day.day} onChange={e => updateDay(i, "day", e.target.value)}>
-            {DAYS_OF_WEEK.map(d => <option key={d}>{d}</option>)}
-          </select>
-          <input style={{ ...inp(), fontSize: 14, padding: "11px 12px" }} value={day.focus || ""} onChange={e => updateDay(i, "focus", e.target.value)} placeholder="Session focus (e.g. Legs)" />
-          <button onClick={() => removeDay(i)} style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", borderRadius: 10, width: 42, height: 42, fontSize: 16, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-        </div>
-
-        {/* Exercises */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
-          {(day.exercises || []).map((ex, j) => (
-            <div key={j} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 10, padding: "8px 12px" }}>
-              <span style={{ flex: 1, fontSize: 13, color: "#a5b4fc" }}>{ex}</span>
-              <button onClick={() => removeEx(i, j)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 18, padding: "0 4px", flexShrink: 0 }}>×</button>
-            </div>
-          ))}
-        </div>
-
-        {/* Add exercise */}
-        <div style={{ display: "flex", gap: 8 }}>
-          <input style={{ ...inp(), fontSize: 14, padding: "11px 12px" }}
-            value={newEx[i] || ""} onChange={e => setNewEx({ ...newEx, [i]: e.target.value })}
-            onKeyDown={e => e.key === "Enter" && addEx(i)}
-            placeholder='Add exercise e.g. "Bench Press 4x8"' />
-          <button onClick={() => addEx(i)} style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "white", borderRadius: 10, padding: "0 16px", cursor: "pointer", flexShrink: 0, fontSize: 20, fontWeight: 700 }}>+</button>
+  return (
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Plan Name</label>
+        <input style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={plan.name || ""} onChange={e => onChange({ ...plan, name: e.target.value })} placeholder="e.g. Marathon Block A" />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+        <div>
+          <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Duration (weeks)</label>
+          <input style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} type="number" value={plan.weeks || ""} onChange={e => onChange({ ...plan, weeks: e.target.value })} placeholder="8" />
         </div>
       </div>
-    ))}
-  </div>
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 7 }}>Trainer Notes (shown to client)</label>
+        <input style={{ ...inp(), fontSize: 15, padding: "13px 14px" }} value={plan.notes || ""} onChange={e => onChange({ ...plan, notes: e.target.value })} placeholder="Motivation or coaching notes..." />
+      </div>
 
-  <button onClick={addDay} style={{ width: "100%", background: "rgba(99,102,241,0.05)", border: "2px dashed rgba(99,102,241,0.3)", color: "#6366f1", borderRadius: 16, padding: "15px", cursor: "pointer", fontSize: 15, fontWeight: 600, fontFamily: "inherit", marginTop: 14 }}>
-    + Add Training Day
-  </button>
-</div>
-```
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {(plan.days || []).map((day, i) => (
+          <div key={i} style={{ background: "rgba(15,23,42,0.7)", border: "1px solid " + (DAY_COLORS[day.day] || "#334155") + "44", borderRadius: 16, padding: 16 }}>
+            {/* Day header */}
+            <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+              <select style={{ ...inp(), fontSize: 14, padding: "11px 12px", flex: "none", width: 130 }} value={day.day} onChange={e => updateDay(i, "day", e.target.value)}>
+                {DAYS_OF_WEEK.map(d => <option key={d}>{d}</option>)}
+              </select>
+              <input style={{ ...inp(), fontSize: 14, padding: "11px 12px" }} value={day.focus || ""} onChange={e => updateDay(i, "focus", e.target.value)} placeholder="Session focus (e.g. Legs)" />
+              <button onClick={() => removeDay(i)} style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", borderRadius: 10, width: 42, height: 42, fontSize: 16, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            </div>
 
-);
+            {/* Exercises */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+              {(day.exercises || []).map((ex, j) => (
+                <div key={j} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 10, padding: "8px 12px" }}>
+                  <span style={{ flex: 1, fontSize: 13, color: "#a5b4fc" }}>{ex}</span>
+                  <button onClick={() => removeEx(i, j)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 18, padding: "0 4px", flexShrink: 0 }}>×</button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add exercise */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <input style={{ ...inp(), fontSize: 14, padding: "11px 12px" }}
+                value={newEx[i] || ""} onChange={e => setNewEx({ ...newEx, [i]: e.target.value })}
+                onKeyDown={e => e.key === "Enter" && addEx(i)}
+                placeholder='Add exercise e.g. "Bench Press 4x8"' />
+              <button onClick={() => addEx(i)} style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "white", borderRadius: 10, padding: "0 16px", cursor: "pointer", flexShrink: 0, fontSize: 20, fontWeight: 700 }}>+</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={addDay} style={{ width: "100%", background: "rgba(99,102,241,0.05)", border: "2px dashed rgba(99,102,241,0.3)", color: "#6366f1", borderRadius: 16, padding: "15px", cursor: "pointer", fontSize: 15, fontWeight: 600, fontFamily: "inherit", marginTop: 14 }}>
+        + Add Training Day
+      </button>
+    </div>
+  );
 }
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 export default function App() {
-const [session, setSession] = useState(null);
-const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-if (USE_FIREBASE) {
-// Firebase mode: seed default data if empty
-seedIfEmpty()
-.then(() => setLoading(false))
-.catch(() => setLoading(false));
-} else {
-// localStorage mode: ready immediately
-setLoading(false);
+  useEffect(() => {
+    if (USE_FIREBASE) {
+      // Firebase mode: seed default data if empty
+      seedIfEmpty()
+        .then(() => setLoading(false))
+        .catch(() => setLoading(false));
+    } else {
+      // localStorage mode: ready immediately
+      setLoading(false);
+    }
+  }, []);
+
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "#060a10", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "sans-serif", color: "white", gap: 16 }}>
+      <div style={{ width: 50, height: 50, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>⚡</div>
+      <div style={{ fontSize: 16, color: "#475569" }}>{USE_FIREBASE ? "Connecting to database..." : "Loading..."}</div>
+    </div>
+  );
+
+  if (!session) return <LoginScreen onLogin={setSession} />;
+  if (session.role === "trainer") return <TrainerDashboard onLogout={() => setSession(null)} />;
+  if (session.role === "client") return <ClientPortal user={session.user} onLogout={() => setSession(null)} />;
 }
-}, []);
-
-if (loading) return (
-<div style={{ minHeight: “100vh”, background: “#060a10”, display: “flex”, flexDirection: “column”, alignItems: “center”, justifyContent: “center”, fontFamily: “sans-serif”, color: “white”, gap: 16 }}>
-<div style={{ width: 50, height: 50, background: “linear-gradient(135deg,#6366f1,#8b5cf6)”, borderRadius: 14, display: “flex”, alignItems: “center”, justifyContent: “center”, fontSize: 24 }}>⚡</div>
-<div style={{ fontSize: 16, color: “#475569” }}>{USE_FIREBASE ? “Connecting to database…” : “Loading…”}</div>
-</div>
-);
-
-if (!session) return <LoginScreen onLogin={setSession} />;
-if (session.role === “trainer”) return <TrainerDashboard onLogout={() => setSession(null)} />;
-if (session.role === “client”) return <ClientPortal user={session.user} onLogout={() => setSession(null)} />;
-}
-
-```
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(App));
-```
 
   </script>
+
 </body>
 </html>
