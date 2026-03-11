@@ -13,8 +13,8 @@
 <body>
   <div id="root"></div>
   <script>
-  window.onerror = function(msg, src, line, col, err) {
-    document.getElementById('root').innerHTML = '<div style="padding:20px;color:white;font-family:sans-serif"><h3 style="color:#f87171">JS Error</h3><p style="margin-top:8px;color:#fca5a5">' + msg + '</p><p style="margin-top:4px;color:#888;font-size:12px">Line ' + line + '</p></div>';
+  window.onerror = function(msg,s,l,c,err) {
+    document.getElementById('root').innerHTML = '<div style="padding:20px;color:white;font-family:sans-serif"><h3 style="color:#f87171">Error: '+msg+'</h3></div>';
   };
   try {
     const { useState, useEffect, useRef } = React;
@@ -292,4 +292,6 @@ function ProgressTracker({ clientId }) {
 
   const addEntry = () => {
     if (!form.weight && !form.chest && !form.waist && !form.hips) return;
-    const updated = [...entries, { ...form, id: Date.now() 
+    const updated = [...entries, { ...form, id: Date.now() }].sort((a, b) => a.date.localeCompare(b.date));
+    setEntries(updated); saveProg(updated);
+    setForm({ date: new Date().toISOStri
