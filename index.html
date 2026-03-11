@@ -4,19 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#060a10" />
   <title>FitByAnubhav</title>
-  <style>* { margin:0; padding:0; box-sizing:border-box; } body { background:#060a10; color:white; font-family:sans-serif; }</style>
+  <style>* { margin:0; padding:0; box-sizing:border-box; } body { background:#060a10; }</style>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
   <script>
+  window.onerror = function(msg, src, line, col, err) {
+    document.getElementById('root').innerHTML = '<div style="padding:20px;color:white;font-family:sans-serif"><h3 style="color:#f87171">JS Error</h3><p style="margin-top:8px;color:#fca5a5">' + msg + '</p><p style="margin-top:4px;color:#888;font-size:12px">Line ' + line + '</p></div>';
+  };
   try {
     const { useState, useEffect, useRef } = React;
-     function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }
+ function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }
 
 // ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
 // ⚠️  To enable live sync: replace these values with your Firebase project config
@@ -29,7 +31,7 @@ const firebaseConfig = {
   appId: "1:263426736148:web:99fa719df00fa906376701"
 };
 
-const USE_FIREBASE = false; // disabled for static hosting
+const USE_FIREBASE = false;
 
 // ─── LOCAL STORAGE HELPERS (fallback / preview mode) ─────────────────────────
 const STORAGE_KEY = "fitbyanubhav-data";
@@ -290,6 +292,4 @@ function ProgressTracker({ clientId }) {
 
   const addEntry = () => {
     if (!form.weight && !form.chest && !form.waist && !form.hips) return;
-    const updated = [...entries, { ...form, id: Date.now() }].sort((a, b) => a.date.localeCompare(b.date));
-    setEntries(updated); saveProg(updated);
-    setForm({ date: new Date().toISOString().split("T")[0], weight: "", chest: "", waist: "", hips
+    const updated = [...entries, { ...form, id: Date.now() 
