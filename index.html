@@ -10,13 +10,13 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { background:#060a10; color:white; font-family:sans-serif; }
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
 <body>
-  <div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px"><div style="width:36px;height:36px;border:3px solid #333;border-top-color:#f97316;border-radius:50%;animation:spin 0.8s linear infinite"></div><p style="color:#666">Starting...</p></div></div>
-  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+  <div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px"><div style="width:36px;height:36px;border:3px solid #333;border-top-color:#f97316;border-radius:50%;animation:spin 0.8s linear infinite"></div><p style="color:#666">Loading...</p></div></div>
   <script>
   try {
     const { useState, useEffect, useRef } = React;
@@ -290,4 +290,4 @@ function ProgressTracker({ clientId }) {
   const saveProg = (d) => { try { localStorage.setItem(PROG_KEY, JSON.stringify(d)); } catch (e7) {} };
   const [entries, setEntries] = useState(loadProg);
   const [form, setForm] = useState({ date: new Date().toISOString().split("T")[0], weight: "", chest: "", waist: "", hips: "", note: "" });
-  const [showFo
+  const [showForm, setShowF
