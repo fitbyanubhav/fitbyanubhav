@@ -7,16 +7,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#060a10" />
   <title>FitByAnubhav</title>
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#060a10; color:white; font-family:sans-serif; }
-    @keyframes spin{to{transform:rotate(360deg)}}
-  </style>
+  <style>* { margin:0; padding:0; box-sizing:border-box; } body { background:#060a10; color:white; font-family:sans-serif; }</style>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
 <body>
-  <div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px"><div style="width:36px;height:36px;border:3px solid #333;border-top-color:#f97316;border-radius:50%;animation:spin 0.8s linear infinite"></div><p style="color:#666">Loading...</p></div></div>
+  <div id="root"></div>
   <script>
   try {
     const { useState, useEffect, useRef } = React;
@@ -33,7 +29,7 @@ const firebaseConfig = {
   appId: "1:263426736148:web:99fa719df00fa906376701"
 };
 
-const USE_FIREBASE = firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY";
+const USE_FIREBASE = false; // disabled for static hosting
 
 // ─── LOCAL STORAGE HELPERS (fallback / preview mode) ─────────────────────────
 const STORAGE_KEY = "fitbyanubhav-data";
@@ -290,4 +286,10 @@ function ProgressTracker({ clientId }) {
   const saveProg = (d) => { try { localStorage.setItem(PROG_KEY, JSON.stringify(d)); } catch (e7) {} };
   const [entries, setEntries] = useState(loadProg);
   const [form, setForm] = useState({ date: new Date().toISOString().split("T")[0], weight: "", chest: "", waist: "", hips: "", note: "" });
-  const [showForm, setShowF
+  const [showForm, setShowForm] = useState(false);
+
+  const addEntry = () => {
+    if (!form.weight && !form.chest && !form.waist && !form.hips) return;
+    const updated = [...entries, { ...form, id: Date.now() }].sort((a, b) => a.date.localeCompare(b.date));
+    setEntries(updated); saveProg(updated);
+    setForm({ date: new Date().toISOString().split("T")[0], weight: "", chest: "", waist: "", hips
